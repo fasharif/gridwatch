@@ -41,13 +41,13 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: data/raw
-          key: gridwatch-raw-${{ github.run_id }}
+          key: gridwatch-raw-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: gridwatch-raw-
       - name: Restore model outputs
         uses: actions/cache/restore@v6
         with:
           path: data/outputs
-          key: gridwatch-outputs-${{ github.run_id }}
+          key: gridwatch-outputs-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: gridwatch-outputs-
 
       - name: Ingest new data
@@ -58,7 +58,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: data/raw
-          key: gridwatch-raw-${{ github.run_id }}
+          key: gridwatch-raw-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: dbt build
         run: uv run gridwatch transform
@@ -76,7 +76,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: data/outputs
-          key: gridwatch-outputs-${{ github.run_id }}
+          key: gridwatch-outputs-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Exports, report and dashboard
         run: |
