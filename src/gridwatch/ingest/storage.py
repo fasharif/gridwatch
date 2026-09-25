@@ -128,8 +128,9 @@ class ParquetStore:
             pl.col(self.time_column).dt.year().alias("__y"),
             pl.col(self.time_column).dt.month().alias("__m"),
         )
-        for (year, month), part in incoming.group_by(["__y", "__m"], maintain_order=True):
-            stats.add(self._upsert_month(int(str(year)), int(str(month)), part.drop("__y", "__m")))
+        for part in incoming.partition_by(["__y", "__m"], maintain_order=True):
+            year, month = int(part["__y"][0]), int(part["__m"][0])
+            stats.add(self._upsert_month(year, month, part.drop("__y", "__m")))
         return stats
 
     def _upsert_month(self, year: int, month: int, new: pl.DataFrame) -> UpsertStats:
