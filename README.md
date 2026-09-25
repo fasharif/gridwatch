@@ -8,8 +8,9 @@ countries compared against the UK and the EU.
 
 ![The gridwatch dashboard: key figures and the last and next 48 hours of GB carbon intensity](docs/images/dashboard.png)
 
-*The dashboard built from the run on 25 September 2026 (screenshot taken with headless
-Chromium). The same page is rebuilt by the daily workflow.*
+*The dashboard built from the run on 25 September 2026, captured with headless Chromium by
+`scripts/screenshot.py`; see also the [dark theme](docs/images/dashboard-dark.png) and the
+[phone layout](docs/images/dashboard-mobile.png). The daily workflow rebuilds the page.*
 
 **Headline results** from that run ([full findings](docs/findings.md)):
 
