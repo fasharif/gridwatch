@@ -16,7 +16,7 @@ from gridwatch.config import ConfigError, Settings
 from gridwatch.forecast.backtest import BacktestConfig
 from gridwatch.forecast.data import SeriesError
 from gridwatch.forecast.model import ModelConfig, NotEnoughHistoryError
-from gridwatch.forecast.service import run_backtest_job, run_forecast
+from gridwatch.forecast.service import FORECAST_FILE, run_backtest_job, run_forecast
 from gridwatch.ingest.cassette import CassetteMissError, RecordingTransport, ReplayTransport
 from gridwatch.ingest.http import HttpFetcher, RateLimiter, RetryPolicy, build_client
 from gridwatch.ingest.pipeline import (
@@ -107,7 +107,13 @@ def _model_config(args: argparse.Namespace) -> ModelConfig:
 
 def cmd_forecast(args: argparse.Namespace, settings: Settings) -> int:
     frame = run_forecast(settings, _model_config(args))
-    print(frame.head(4))
+    # Plain ASCII output: a Windows console may not be able to encode table borders.
+    for row in frame.head(4).iter_rows(named=True):
+        print(
+            f"{row['period_start_utc']:%Y-%m-%d %H:%M} UTC  {row['forecast_gco2_kwh']:6.1f} "
+            f"gCO2/kWh  (10-90%: {row['p10_gco2_kwh']:.0f} to {row['p90_gco2_kwh']:.0f})"
+        )
+    print(f"... {frame.height} half-hours in {settings.outputs_dir / FORECAST_FILE}")
     return 0
 
 
