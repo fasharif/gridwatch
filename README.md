@@ -152,7 +152,7 @@ the variable.
 ## Running the tests
 
 ```bash
-uv run pytest                  # 118 tests, no network (pytest-socket blocks it)
+uv run pytest                  # 119 tests, no network (pytest-socket blocks it)
 uv run ruff check . && uv run ruff format --check . && uv run mypy
 ```
 
