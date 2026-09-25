@@ -45,9 +45,10 @@ those questions in SQL, and publishes the results as a dashboard and reusable CS
   since 2017, generation mix, 18 regions) and Ember's yearly data, with rate limiting,
   retries, conditional downloads, gap repair and raw data kept as Parquet.
 - **A dimensional dbt project** on DuckDB: staging, intermediate and mart layers with date,
-  time-of-day, region, fuel and country dimensions, and 200 dbt nodes including 156 data
-  tests. Custom tests check for gaps in half-hourly series, freshness, plausible ranges and
-  generation shares that add up.
+  time-of-day, region, fuel and country dimensions, 156 data tests and 4 dbt unit tests.
+  Custom tests check for gaps in half-hourly series, freshness, plausible ranges and
+  generation shares that add up; unit tests pin the gap-filling, cleaning, time-zone and
+  savings logic on hand-made inputs.
 - **Business questions answered in SQL:** the best time to run a flexible job and the carbon
   saved by seven scheduling rules, GCC against UK and EU, seasonal and regional variation, and
   the accuracy of the API's own forecast.

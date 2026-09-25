@@ -41,7 +41,7 @@ def steps(as_of: str, scratch: Path) -> list[tuple[str, list[str]]]:
             "ingest (replayed cassette)",
             ["ingest", "--replay", str(ROOT / "tests/fixtures/cassette"), "--as-of", as_of],
         ),
-        ("transform (dbt build, 200 nodes)", ["transform", "--as-of", as_of]),
+        ("transform (dbt build and tests)", ["transform", "--as-of", as_of]),
         ("forecast (train and predict)", ["forecast", "--train-days", "30"]),
         (
             "backtest (7 origins)",

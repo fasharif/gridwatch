@@ -8,7 +8,7 @@ with measured medians.
 | Step | Median seconds |
 | --- | ---: |
 | ingest (replayed cassette) | pending |
-| transform (dbt build, 200 nodes) | pending |
+| transform (dbt build and tests) | pending |
 | forecast (train and predict) | pending |
 | backtest (7 origins) | pending |
 | report | pending |

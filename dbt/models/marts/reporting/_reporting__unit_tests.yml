@@ -1,0 +1,23 @@
+version: 2
+
+unit_tests:
+  - name: savings_compare_rules_over_the_same_days
+    description: >
+      Means per rule over the days where every rule has a value, savings against the fixed
+      17:00 start, and kilograms per run for a 100 kW, 4-hour job.
+    model: rpt_batch_job_savings
+    given:
+      - input: ref('rpt_batch_job_daily_strategies')
+        rows:
+          - {job_start_date: "2026-01-01", fixed_0000: 100, fixed_0900: 200, fixed_1700: 300, any_start: 150, profile_guided: 100, forecast_guided: 90, oracle: 80}
+          - {job_start_date: "2026-01-02", fixed_0000: 100, fixed_0900: 100, fixed_1700: 100, any_start: 100, profile_guided: 50, forecast_guided: 60, oracle: 40}
+          - {job_start_date: "2026-01-03", fixed_0000: 999, fixed_0900: 999, fixed_1700: 999, any_start: 999, profile_guided: null, forecast_guided: 999, oracle: 999}
+    expect:
+      rows:
+        - {strategy: fixed_0000, days: 2, mean_job_gco2_kwh: 100, saving_vs_1700_pct: 50, kg_co2_per_run: 40}
+        - {strategy: fixed_0900, days: 2, mean_job_gco2_kwh: 150, saving_vs_1700_pct: 25, kg_co2_per_run: 60}
+        - {strategy: fixed_1700, days: 2, mean_job_gco2_kwh: 200, saving_vs_1700_pct: 0, kg_co2_per_run: 80}
+        - {strategy: any_start, days: 2, mean_job_gco2_kwh: 125, saving_vs_1700_pct: 37.5, kg_co2_per_run: 50}
+        - {strategy: profile_guided, days: 2, mean_job_gco2_kwh: 75, saving_vs_1700_pct: 62.5, kg_co2_per_run: 30}
+        - {strategy: forecast_guided, days: 2, mean_job_gco2_kwh: 75, saving_vs_1700_pct: 62.5, kg_co2_per_run: 30}
+        - {strategy: oracle, days: 2, mean_job_gco2_kwh: 60, saving_vs_1700_pct: 70, kg_co2_per_run: 24}
