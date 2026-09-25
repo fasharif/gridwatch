@@ -202,8 +202,9 @@ how history is kept between scheduled runs. Data sources, licences and quirks ar
 - **Like-for-like forecast accuracy.** The API does not keep its day-ahead forecasts, so
   gridwatch stores one snapshot per run. The comparison by lead time
   (`rpt_api_forecast_snapshot_accuracy`) needs weeks of daily runs before it means anything.
-- **Run times** have not been measured: the build machine was shared with other heavy jobs,
-  so timings from it would mislead.
+- **Run times** are not published yet: the build machine was shared with other heavy jobs,
+  so timings from it would mislead. [docs/generated/timings.md](docs/generated/timings.md) is
+  a pending table; `uv run python scripts/time_pipeline.py` fills it on an idle machine.
 
 **Known limitations**
 
