@@ -20,8 +20,8 @@ countries compared against the UK and the EU.
   emissions by **15%** against a fixed 09:00 start and **38%** against 17:00, with no
   forecast at all.
 - In 2024 a kWh in the **UAE** carried **2.2 times** the lifecycle emissions of a kWh in the
-  UK, and the GCC as a whole **2.9 times**. The UAE's intensity fell 31% since 2015, mostly
-  from nuclear power; the rest of the GCC barely moved.
+  UK, and the GCC as a whole **2.9 times**. The UAE's intensity fell 31% between 2015 and
+  2024, mostly thanks to nuclear power; the rest of the GCC barely moved.
 - gridwatch's 24-48 hour forecast had an MAE of **42.5 gCO2/kWh**, 11% better than repeating
   the last known day, but it lost to that baseline on 42% of days and is far behind the
   API's own short-lead forecast (9.9).
@@ -30,9 +30,9 @@ countries compared against the UK and the EU.
 
 In the year to August 2026 the cleanest tenth of half-hours on the GB grid came in under
 57 gCO2/kWh and the dirtiest tenth over 201, and the pattern shifts with the seasons, the
-weather and the region. Anyone who can move a load in
-time, from a nightly batch job to charging a fleet, needs to know when the clean hours are,
-how much moving actually saves, and how far ahead that can be predicted. For the Gulf, the
+weather and the region. Anyone who can move a load in time, from a nightly batch job to
+charging a fleet, needs to know when the clean hours are, how much moving actually saves, and
+how far ahead that can be predicted. For the Gulf, the
 question is how far behind the UK and EU its grids are and whether the gap is closing.
 
 The open data exists, but it is spread over two sources with different units, gaps, upstream
@@ -49,12 +49,12 @@ those questions in SQL, and publishes the results as a dashboard and reusable CS
   tests. Custom tests check for gaps in half-hourly series, freshness, plausible ranges and
   generation shares that add up.
 - **Business questions answered in SQL:** the best time to run a flexible job and the carbon
-  saved by five scheduling rules, GCC against UK and EU, seasonal and regional variation, and
+  saved by seven scheduling rules, GCC against UK and EU, seasonal and regional variation, and
   the accuracy of the API's own forecast.
 - **A 48-hour forecast** with calibrated 10-90% intervals and a year-long rolling-origin
   backtest against naive baselines and the API.
-- **A static dashboard** with table views for every chart, deployed to GitHub Pages by a
-  daily workflow.
+- **A static dashboard** with a table view for every chart, and a daily workflow that
+  rebuilds it and deploys it to GitHub Pages.
 - **Exports:** [`exports/annual_grid_intensity.csv`](exports/annual_grid_intensity.csv) for
   other projects' carbon estimates, and a Power BI star schema with DAX measures.
 
@@ -72,7 +72,7 @@ flowchart LR
     end
     subgraph Warehouse["gridwatch transform (dbt + DuckDB)"]
         S[staging] --> I[intermediate] --> M[marts: dims and facts] --> RP[reporting models]
-        T{{data tests}}
+        T{{156 data tests}} -.- S & I & M
     end
     subgraph Outputs
         FC[forecast and backtest<br/>scikit-learn]
@@ -145,7 +145,8 @@ environment variables only.
 
 Analysis settings live in `dbt/dbt_project.yml` as dbt variables: job length
 (`batch_job_hours`), the report window, the plausible range for intensity values and the
-freshness threshold. Invalid values stop the run with a message that names the variable.
+freshness threshold. An invalid environment value stops the run with a message that names
+the variable.
 
 ## Running the tests
 
@@ -174,7 +175,7 @@ gridwatch/
 │   └── export.py        # annual CSV and Power BI star schema
 ├── dbt/                 # dbt project: models, seeds, macros, generic and singular tests
 ├── tests/               # pytest suite, fake API and recorded cassette
-├── scripts/             # fixture recording, bank-holiday seed, screenshots
+├── scripts/             # fixture recording, bank-holiday seed, screenshots, timings
 ├── docs/                # findings, data, forecast method, decisions, generated tables
 ├── exports/             # annual_grid_intensity.csv
 ├── powerbi/             # star-schema CSVs, DAX measures, build guide
@@ -192,8 +193,9 @@ how history is kept between scheduled runs. Data sources, licences and quirks ar
 
 **Not run yet**
 
-- **The GitHub workflows have not run on GitHub.** They pass actionlint and every command in
-  them was run locally, but the first real runs happen after the repository is published.
+- **The GitHub workflows have not run on GitHub.** They pass actionlint, and the steps they
+  run were run locally on Windows 11 and in a Linux `python:3.12-slim` container, but the
+  first real runs happen after the repository is published.
   To enable the dashboard, set *Settings > Pages > Source* to *GitHub Actions*, then run the
   *Daily pipeline* workflow once by hand (*Actions > Daily pipeline > Run workflow*, with
   *backtest* ticked).
