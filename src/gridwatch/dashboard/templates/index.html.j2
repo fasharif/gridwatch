@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>gridwatch</title>
+  <meta name="description" content="Carbon intensity of electricity in Great Britain, the UAE, the GCC, the UK and the EU, rebuilt daily from open data.">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <header class="page-header">
+    <div class="wrap">
+      <p class="eyebrow">gridwatch</p>
+      <h1>How clean is the electricity, and when?</h1>
+      <p class="lede">Half-hourly carbon intensity for Great Britain, with the UAE and the other GCC countries compared against the UK and the EU. Rebuilt daily from open data.</p>
+      <p class="meta">
+        GB actuals through <strong>{{ data.data_through_utc or "n/a" }} UTC</strong>.
+        Report window {{ data.report_window.start_date }} to {{ data.report_window.end_date }} (UK local dates).
+        Page built {{ data.built_at_utc }} UTC.
+      </p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="tiles" aria-label="Key figures">
+      {% for tile in tiles %}
+      <div class="tile">
+        <p class="tile-label">{{ tile.label }}</p>
+        <p class="tile-value">{{ tile.value }} <span class="tile-unit">{{ tile.unit }}</span></p>
+        <p class="tile-detail">{{ tile.detail }}</p>
+      </div>
+      {% endfor %}
+    </section>
+
+    {% macro card(chart, wide=false) %}
+    <article class="card{% if wide %} card-wide{% endif %}" id="card-{{ chart.id }}">
+      <h3>{{ chart.title }}</h3>
+      <p class="subtitle">{{ chart.subtitle }}</p>
+      {% if chart.spec %}
+      <div class="chart" id="chart-{{ chart.id }}" role="img" aria-label="{{ chart.title }}"></div>
+      {% else %}
+      <p class="empty">No data yet for this chart.</p>
+      {% endif %}
+      {% if chart.note %}<p class="note">{{ chart.note }}</p>{% endif %}
+      {% if chart.rows %}
+      <details class="table-view">
+        <summary>Show the numbers</summary>
+        <div class="table-scroll" data-table="{{ chart.id }}"></div>
+      </details>
+      {% endif %}
+    </article>
+    {% endmacro %}
+
+    <section aria-labelledby="h-now">
+      <h2 id="h-now">Now and the next 48 hours</h2>
+      <div class="grid">{{ card(charts.next48, wide=true) }}</div>
+    </section>
+
+    <section aria-labelledby="h-when">
+      <h2 id="h-when">When to run a flexible job</h2>
+      <p class="section-intro">A batch job that can move within the day, such as a nightly build, a data refresh or charging a vehicle fleet. All times are UK local time.</p>
+      <div class="grid">
+        {{ card(charts.slots) }}
+        {{ card(charts.strategies) }}
+        {{ card(charts.week, wide=true) }}
+      </div>
+    </section>
+
+    <section aria-labelledby="h-seasons">
+      <h2 id="h-seasons">Seasons, years and regions</h2>
+      <div class="grid">
+        {{ card(charts.seasons) }}
+        {{ card(charts.regions) }}
+        {{ card(charts.monthly, wide=true) }}
+      </div>
+    </section>
+
+    <section aria-labelledby="h-gulf">
+      <h2 id="h-gulf">The UAE and the GCC against the UK and EU</h2>
+      <div class="grid">{{ card(charts.countries, wide=true) }}</div>
+      {% if has_csv %}
+      <p class="section-intro">Download the annual figures: <a href="data/annual_grid_intensity.csv">annual_grid_intensity.csv</a> (country, year, gCO2e/kWh, source and licence on every row).</p>
+      {% endif %}
+    </section>
+
+    <section aria-labelledby="h-forecast">
+      <h2 id="h-forecast">How good is the forecast?</h2>
+      <div class="grid">{{ card(charts.backtest, wide=true) }}</div>
+    </section>
+
+    <section class="method" aria-labelledby="h-method">
+      <h2 id="h-method">Read this before quoting a number</h2>
+      <ul>
+        <li>GB figures are operational emissions from generation (gCO2/kWh) as estimated by the Carbon Intensity API. Country figures are Ember's lifecycle emissions (gCO2e/kWh), which include fuel supply and construction. The two scales are not comparable.</li>
+        <li>Regional GB values are the API's modelled forecasts; the API publishes no regional actuals.</li>
+        <li>Ember multiplies generation by fuel by an emission factor per fuel, and its gas factor for each country is a single 2017 value. A system that is almost all gas, such as Bahrain's, therefore shows an almost flat line: only changes in the fuel mix move it, not gains in plant efficiency.</li>
+        <li>Half-hours the API does not serve, and values outside 10 to 700 gCO2/kWh, are excluded and counted in the project's data quality tests.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="page-footer">
+    <div class="wrap">
+      <p>Data: <a href="https://carbonintensity.org.uk/">Carbon Intensity API</a>, National Energy System Operator (CC BY 4.0), and <a href="https://ember-energy.org/data/yearly-electricity-data/">Ember Yearly Electricity Data</a> (CC BY 4.0). This page is not affiliated with either organisation.</p>
+      <p>Source code and method: <a href="https://github.com/fasharif/gridwatch">github.com/fasharif/gridwatch</a> (MIT licence).</p>
+    </div>
+  </footer>
+
+  <script type="application/json" id="chart-data">{{ charts_json | safe }}</script>
+  <script src="assets/plotly.min.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
