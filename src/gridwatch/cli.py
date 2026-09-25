@@ -99,7 +99,9 @@ def _model_config(args: argparse.Namespace) -> ModelConfig:
     # Hold out up to 56 days (and at most a fifth of the window) to calibrate the interval.
     return ModelConfig(
         train_days=args.train_days,
-        calibration_days=min(ModelConfig.calibration_days, args.train_days // 5),
+        calibration_days=min(
+            getattr(args, "calibration_days", ModelConfig.calibration_days), args.train_days // 5
+        ),
     )
 
 
@@ -116,7 +118,8 @@ def cmd_backtest(args: argparse.Namespace, settings: Settings) -> int:
         origin_hour_utc=args.origin_hour,
         model=_model_config(args),
     )
-    summary = run_backtest_job(settings, config)
+    until = _parse_as_of(args.until) if getattr(args, "until", None) else None
+    summary = run_backtest_job(settings, config, until)
     for row in summary["metrics"]:  # type: ignore[attr-defined]
         log.info(
             "%-8s %-16s MAE %6.2f  RMSE %6.2f  MAPE %5.1f%%",
@@ -214,6 +217,13 @@ def _add_model_args(parser: argparse.ArgumentParser) -> None:
         default=ModelConfig.train_days,
         help="days of history each model is trained on (default: %(default)s)",
     )
+    parser.add_argument(
+        "--calibration-days",
+        type=int,
+        default=ModelConfig.calibration_days,
+        help="recent days held out to calibrate the interval; 0 turns calibration off "
+        "(default: %(default)s, capped at a fifth of --train-days)",
+    )
 
 
 def _add_window_args(parser: argparse.ArgumentParser) -> None:
@@ -269,6 +279,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=BacktestConfig.retrain_every_days,
         help="retrain the model every N origins (default: %(default)s)",
+    )
+    backtest.add_argument(
+        "--until",
+        help="use only data before this UTC time, e.g. to validate settings on a period "
+        "before the test year (outputs get a suffix)",
     )
     backtest.add_argument(
         "--origin-hour",

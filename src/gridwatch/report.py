@@ -273,7 +273,7 @@ def build_report(warehouse: Path, outputs_dir: Path) -> str:
         "",
         "Lifecycle intensity (gCO2e/kWh) by year:",
         "",
-        markdown_table(trend, decimals=0),
+        markdown_table(trend.rename({"country_name": "Area"}), decimals=0),
         "",
         "## (c) Seasonal and regional variation in GB",
         "",

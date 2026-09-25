@@ -76,13 +76,26 @@ def summary_json(result: BacktestResult, config: BacktestConfig) -> dict[str, ob
     }
 
 
-def run_backtest_job(settings: Settings, config: BacktestConfig) -> dict[str, object]:
+def run_backtest_job(
+    settings: Settings, config: BacktestConfig, until: datetime | None = None
+) -> dict[str, object]:
+    """Run the backtest and write its outputs.
+
+    With ``until`` only data before that time is used (for choosing settings on a period
+    before the test year), and the outputs get a suffix so the main results are kept.
+    """
     series = load_national_series(settings.warehouse_path)
+    suffix = ""
+    if until is not None:
+        series = series.truncate(until)
+        suffix = f"_until_{until:%Y%m%d}"
     result = run_backtest(series, config)
     settings.outputs_dir.mkdir(parents=True, exist_ok=True)
-    result.predictions.write_parquet(settings.outputs_dir / BACKTEST_PREDICTIONS_FILE)
+    predictions_name = BACKTEST_PREDICTIONS_FILE.replace(".parquet", f"{suffix}.parquet")
+    result.predictions.write_parquet(settings.outputs_dir / predictions_name)
     summary = summary_json(result, config)
-    path: Path = settings.outputs_dir / BACKTEST_SUMMARY_FILE
+    summary["until_utc"] = None if until is None else until.strftime("%Y-%m-%dT%H:%MZ")
+    path: Path = settings.outputs_dir / BACKTEST_SUMMARY_FILE.replace(".json", f"{suffix}.json")
     path.write_text(
         json.dumps(summary, indent=2, default=str) + "\n", encoding="utf-8", newline="\n"
     )

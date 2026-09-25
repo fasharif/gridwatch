@@ -48,6 +48,15 @@ class NationalSeries:
             raise SeriesError(f"{when.isoformat()} is not on the half-hour grid")
         return int(delta / HALF_HOUR)
 
+    def truncate(self, until: datetime) -> NationalSeries:
+        """The part of the series that starts before ``until`` (for validation runs)."""
+        stop = max(0, min(len(self), self.index_of(until)))
+        if stop == 0:
+            raise SeriesError(f"no data before {until.isoformat()}")
+        return NationalSeries(
+            self.start, self.actual[:stop].copy(), self.api_forecast[:stop].copy()
+        )
+
     def last_actual_index(self) -> int:
         known = np.flatnonzero(~np.isnan(self.actual))
         if known.size == 0:

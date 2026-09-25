@@ -195,3 +195,12 @@ def test_series_helpers() -> None:
         series.index_of(datetime(2026, 1, 1, 0, 10, tzinfo=UTC))
     with pytest.raises(SeriesError, match="empty"):
         NationalSeries.from_frame(frame.head(0))
+
+
+def test_truncate_keeps_data_before_cutoff() -> None:
+    series = synthetic_series(days=10)
+    cut = series.truncate(datetime(2025, 1, 5, tzinfo=UTC))
+    assert len(cut) == 4 * 48
+    assert cut.timestamp(len(cut) - 1) == datetime(2025, 1, 4, 23, 30)
+    with pytest.raises(SeriesError, match="no data before"):
+        series.truncate(datetime(2024, 12, 1, tzinfo=UTC))
