@@ -1,0 +1,10 @@
+gridwatch:
+  target: local
+  outputs:
+    local:
+      type: duckdb
+      path: "{{ env_var('GRIDWATCH_WAREHOUSE', '../data/warehouse/gridwatch.duckdb') }}"
+      threads: 4
+      settings:
+        TimeZone: UTC
+        memory_limit: "{{ env_var('GRIDWATCH_DUCKDB_MEMORY', '2GB') }}"

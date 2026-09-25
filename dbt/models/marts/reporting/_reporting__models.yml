@@ -1,0 +1,142 @@
+version: 2
+
+models:
+  - name: rpt_report_window
+    description: The UK local date range that the GB reports summarise.
+    columns:
+      - name: start_date
+        data_tests: [not_null]
+      - name: end_date
+        data_tests: [not_null]
+      - name: days
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 400
+
+  - name: rpt_gb_weekly_profile
+    description: Mean actual intensity by UK local day of week and half-hour (report window).
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [iso_day_of_week, time_key]
+
+  - name: rpt_batch_job_start_slots
+    description: Mean intensity seen by a flexible job for each UK local start time.
+    columns:
+      - name: time_key
+        data_tests: [not_null, unique]
+      - name: mean_job_gco2_kwh
+        data_tests: [not_null]
+
+  - name: rpt_batch_job_week_slots
+    description: Mean intensity seen by the job for each day of week and start time.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [iso_day_of_week, time_key]
+
+  - name: rpt_batch_job_daily_strategies
+    description: One job run per day under each scheduling rule, with the intensity it saw.
+    columns:
+      - name: job_start_date
+        data_tests: [not_null, unique]
+
+  - name: rpt_batch_job_savings
+    description: Mean intensity per scheduling rule over the same days, and savings against fixed schedules.
+    columns:
+      - name: strategy
+        data_tests:
+          - not_null
+          - unique
+          - accepted_values:
+              arguments:
+                values: [fixed_0000, fixed_0900, fixed_1700, any_start, profile_guided,
+                         forecast_guided, oracle]
+
+  - name: rpt_gb_monthly_intensity
+    description: Monthly distribution of GB national intensity and generation shares.
+    columns:
+      - name: year_month
+        data_tests: [not_null, unique]
+      - name: coverage_pct
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+
+  - name: rpt_gb_annual_intensity
+    description: GB national intensity per calendar year.
+    columns:
+      - name: calendar_year
+        data_tests: [not_null, unique]
+
+  - name: rpt_gb_seasonal_profile
+    description: Average day per meteorological season (report window).
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [season, time_key]
+
+  - name: rpt_gb_seasonal_summary
+    description: One row per season in the report window.
+    columns:
+      - name: season
+        data_tests: [not_null, unique]
+
+  - name: rpt_gb_regional_intensity
+    description: Mean regional forecast intensity (report window), overall and by season.
+    columns:
+      - name: region_id
+        data_tests: [not_null, unique]
+
+  - name: rpt_api_forecast_accuracy
+    description: MAE, RMSE, MAPE and bias of the API's retained forecast against its actual.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [scope, scope_value]
+    columns:
+      - name: mae_gco2_kwh
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 200
+
+  - name: rpt_api_forecast_snapshot_accuracy
+    description: Accuracy of stored API forecast snapshots by lead time (fills up over time).
+    columns:
+      - name: lead_band
+        data_tests: [unique]
+
+  - name: rpt_country_intensity_trend
+    description: Annual lifecycle intensity per country from 2000, plus a GCC aggregate.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [country_code, year]
+
+  - name: rpt_country_intensity_comparison
+    description: Each area against the UK and EU in the latest year all areas share.
+    columns:
+      - name: country_code
+        data_tests: [not_null, unique]
+
+  - name: rpt_annual_grid_intensity_export
+    description: Source of exports/annual_grid_intensity.csv.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [country_code, year]
+    columns:
+      - name: intensity_gco2e_per_kwh
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1500

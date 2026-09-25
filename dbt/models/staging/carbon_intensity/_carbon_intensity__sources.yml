@@ -1,0 +1,23 @@
+version: 2
+
+sources:
+  - name: carbon_intensity
+    description: >
+      Raw Parquet written by `gridwatch ingest` from the GB Carbon Intensity API
+      (https://api.carbonintensity.org.uk), National Energy System Operator, CC BY 4.0.
+      Timestamps are naive UTC.
+    config:
+      meta:
+        external_location: >-
+          read_parquet('{{ env_var('GRIDWATCH_DATA_DIR', '../data') }}/raw/carbon_intensity/{name}/*/*.parquet')
+    tables:
+      - name: national_intensity
+        description: National half-hourly forecast and actual intensity, one row per period.
+      - name: generation_mix
+        description: National half-hourly generation mix, one row per period and fuel.
+      - name: regional_intensity
+        description: Forecast intensity for the 14 DNO regions and 4 aggregates, per period.
+      - name: regional_generation_mix
+        description: Regional generation mix, one row per period, region and fuel.
+      - name: forecast_snapshots
+        description: The API's 48-hour national forecast, stored each time the pipeline runs.

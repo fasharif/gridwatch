@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: ember
+    description: >
+      Ember Yearly Electricity Data (https://ember-energy.org/data/yearly-electricity-data/),
+      CC BY 4.0, downloaded as the public bulk CSV and stored as Parquet by `gridwatch ingest`.
+    config:
+      meta:
+        external_location: >-
+          read_parquet('{{ env_var('GRIDWATCH_DATA_DIR', '../data') }}/raw/ember/{name}/*.parquet')
+    tables:
+      - name: yearly_electricity
+        description: One row per area, year and electricity source.

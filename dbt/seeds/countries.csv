@@ -1,0 +1,10 @@
+ember_area,country_code,display_name,peer_group,is_gcc,sort_order
+United Arab Emirates,ARE,United Arab Emirates,GCC,true,1
+Saudi Arabia,SAU,Saudi Arabia,GCC,true,2
+Qatar,QAT,Qatar,GCC,true,3
+Kuwait,KWT,Kuwait,GCC,true,4
+Bahrain,BHR,Bahrain,GCC,true,5
+Oman,OMN,Oman,GCC,true,6
+United Kingdom,GBR,United Kingdom,UK,false,7
+EU,EU27,European Union (EU-27),EU,false,8
+World,WLD,World,Benchmark,false,9
