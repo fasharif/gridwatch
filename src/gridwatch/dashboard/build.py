@@ -114,6 +114,8 @@ def render(data: DashboardData, out_dir: Path, annual_csv: Path | None = None) -
         charts={c["id"]: c for c in charts},
         charts_json=_json_for_script(charts),
         has_csv=annual_csv is not None and annual_csv.exists(),
+        has_powerbi=(out_dir / "downloads" / "powerbi" / "manifest.json").exists(),
+        csv_name=annual_csv.name if annual_csv is not None else "",
     )
     assets = out_dir / "assets"
     assets.mkdir(parents=True, exist_ok=True)

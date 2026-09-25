@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint and type-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff format --check .
+      - run: uv run ruff check .
+      - run: uv run mypy
+      - name: Lint workflow files
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
+
+  test:
+    name: Tests (pytest, no network)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run pytest --cov --cov-report=term --cov-report=xml
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: coverage
+          path: coverage.xml
+          retention-days: 14
+
+  pipeline-on-fixtures:
+    name: dbt build and dashboard on recorded data
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GRIDWATCH_DATA_DIR: ci-data
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Ingest from the recorded cassette
+        run: |
+          set -a
+          . tests/fixtures/fixture.env
+          set +a
+          uv run gridwatch ingest --replay tests/fixtures/cassette --as-of "$FIXTURE_AS_OF"
+          echo "FIXTURE_AS_OF=$FIXTURE_AS_OF" >> "$GITHUB_ENV"
+      - name: dbt build (models and data tests)
+        run: uv run gridwatch transform --as-of "$FIXTURE_AS_OF"
+      - name: Forecast and a short backtest
+        run: |
+          uv run gridwatch forecast --train-days 30
+          uv run gridwatch backtest --train-days 30 --test-days 7 --retrain-every 7
+      - name: Report, exports and dashboard
+        run: |
+          uv run gridwatch report --out ci-output/report.md
+          uv run gridwatch export --annual-csv ci-output/annual_grid_intensity.csv --powerbi-dir site/downloads/powerbi --half-hourly-days 14
+          uv run gridwatch site --out site --annual-csv ci-output/annual_grid_intensity.csv
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-from-fixtures
+          path: |
+            site/
+            ci-output/
+          retention-days: 14

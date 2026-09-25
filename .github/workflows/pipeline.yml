@@ -1,0 +1,107 @@
+name: Daily pipeline
+
+# Fetches new data, rebuilds the warehouse, refreshes the forecast and publishes the
+# dashboard to GitHub Pages. Raw data and model outputs live in the Actions cache between
+# runs (see docs/decisions.md); if the cache has been evicted the run backfills history.
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      backtest:
+        description: Run the 365-day backtest even if today is not Monday
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-pipeline
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Ingest, transform, forecast and build the site
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GRIDWATCH_DATA_DIR: data
+      RUN_BACKTEST: ${{ inputs.backtest }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+
+      - name: Restore raw data
+        uses: actions/cache/restore@v6
+        with:
+          path: data/raw
+          key: gridwatch-raw-${{ github.run_id }}
+          restore-keys: gridwatch-raw-
+      - name: Restore model outputs
+        uses: actions/cache/restore@v6
+        with:
+          path: data/outputs
+          key: gridwatch-outputs-${{ github.run_id }}
+          restore-keys: gridwatch-outputs-
+
+      - name: Ingest new data
+        id: ingest
+        run: uv run gridwatch ingest
+      - name: Save raw data
+        if: always() && steps.ingest.outcome != 'skipped'
+        uses: actions/cache/save@v6
+        with:
+          path: data/raw
+          key: gridwatch-raw-${{ github.run_id }}
+
+      - name: dbt build
+        run: uv run gridwatch transform
+      - name: Forecast the next 48 hours
+        run: uv run gridwatch forecast
+      - name: Backtest (Mondays, on request, or when no result is cached)
+        run: |
+          if [ "$RUN_BACKTEST" = "true" ] || [ "$(date -u +%u)" = "1" ] \
+             || [ ! -f data/outputs/backtest_summary.json ]; then
+            uv run gridwatch backtest
+          else
+            echo "Using the cached backtest from $(jq -r .generated_at_utc data/outputs/backtest_summary.json)"
+          fi
+      - name: Save model outputs
+        uses: actions/cache/save@v6
+        with:
+          path: data/outputs
+          key: gridwatch-outputs-${{ github.run_id }}
+
+      - name: Exports, report and dashboard
+        run: |
+          uv run gridwatch export --annual-csv site-extra/annual_grid_intensity.csv --powerbi-dir site/downloads/powerbi
+          uv run gridwatch report --out site-extra/report.md
+          uv run gridwatch site --out site --annual-csv site-extra/annual_grid_intensity.csv
+      - uses: actions/upload-artifact@v7
+        with:
+          name: report-and-exports
+          path: site-extra/
+          retention-days: 30
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

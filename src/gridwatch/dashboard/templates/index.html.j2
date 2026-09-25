@@ -79,7 +79,7 @@
       <h2 id="h-gulf">The UAE and the GCC against the UK and EU</h2>
       <div class="grid">{{ card(charts.countries, wide=true) }}</div>
       {% if has_csv %}
-      <p class="section-intro">Download the annual figures: <a href="data/annual_grid_intensity.csv">annual_grid_intensity.csv</a> (country, year, gCO2e/kWh, source and licence on every row).</p>
+      <p class="section-intro">Download the annual figures: <a href="data/{{ csv_name }}">{{ csv_name }}</a> (country, year, gCO2e/kWh, source and licence on every row).</p>
       {% endif %}
     </section>
 
@@ -87,6 +87,13 @@
       <h2 id="h-forecast">How good is the forecast?</h2>
       <div class="grid">{{ card(charts.backtest, wide=true) }}</div>
     </section>
+
+    {% if has_powerbi %}
+    <section aria-labelledby="h-downloads">
+      <h2 id="h-downloads">Downloads</h2>
+      <p class="section-intro">Star-schema CSV files for Power BI or any BI tool, rebuilt with this page: <a href="downloads/powerbi/manifest.json">manifest.json</a> lists the tables. See the build guide in the repository's powerbi folder.</p>
+    </section>
+    {% endif %}
 
     <section class="method" aria-labelledby="h-method">
       <h2 id="h-method">Read this before quoting a number</h2>
