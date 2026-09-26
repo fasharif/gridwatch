@@ -402,6 +402,18 @@ def internal_gaps(starts: Sequence[datetime]) -> list[Window]:
     return gaps
 
 
+def merge_windows(windows: Sequence[Window]) -> list[Window]:
+    """Sort windows and merge any that overlap or touch, so no half-hour is requested twice."""
+    merged: list[Window] = []
+    for window in sorted(windows, key=lambda w: (w.start, w.end)):
+        if merged and window.start <= merged[-1].end:
+            last = merged[-1]
+            merged[-1] = Window(last.start, max(last.end, window.end))
+        else:
+            merged.append(window)
+    return merged
+
+
 def plan_requests(
     base: str, dataset: Dataset, windows: Sequence[Window]
 ) -> list[tuple[str, Window]]:

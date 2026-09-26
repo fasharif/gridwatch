@@ -134,6 +134,50 @@ def test_repair_gaps_requests_only_the_holes(
     )
 
 
+def test_an_old_gap_is_filled_only_with_repair_gaps(
+    settings_factory: Callable[..., Settings], fetcher_factory: Callable[..., HttpFetcher]
+) -> None:
+    """The daily run re-requests only the refetch window; older holes need --repair-gaps."""
+    settings = fake_settings(settings_factory, "2026-02-01")  # refetch window: 1 day
+    hole = datetime(2026, 2, 3, 10, tzinfo=UTC)
+    api = FakeCarbonApi(missing={hole})
+    fetcher = fetcher_factory(httpx.MockTransport(api))
+    now = datetime(2026, 2, 10, tzinfo=UTC)
+    full = half_hours(datetime(2026, 2, 1, tzinfo=UTC), now)
+    run_ingest(settings, fetcher, now, ["national"])
+    api.missing.clear()  # the API serves the half-hour again
+    run_ingest(settings, fetcher, now, ["national"])
+    assert national_store(settings.raw_dir).read().height == full - 1
+    run_ingest(settings, fetcher, now, ["national"], repair_gaps=True)
+    assert national_store(settings.raw_dir).read().height == full
+
+
+def test_repair_gaps_finds_a_hole_in_one_region_only(
+    settings_factory: Callable[..., Settings], fetcher_factory: Callable[..., HttpFetcher]
+) -> None:
+    settings = fake_settings(settings_factory, "2026-02-01")
+    london_hole = {
+        (13, datetime(2026, 2, 3, 10, tzinfo=UTC)),
+        (13, datetime(2026, 2, 3, 10, 30, tzinfo=UTC)),
+        (1, datetime(2026, 2, 3, 11, tzinfo=UTC)),  # touches the London hole: one request
+    }
+    api = FakeCarbonApi(missing_regions=set(london_hole))
+    fetcher = fetcher_factory(httpx.MockTransport(api))
+    now = datetime(2026, 2, 10, tzinfo=UTC)
+    full = half_hours(datetime(2026, 2, 1, tzinfo=UTC), now) * 3
+    run_ingest(settings, fetcher, now, ["regional"])
+    store = regional_intensity_store(settings.raw_dir)
+    assert store.read().height == full - 3
+    # Every half-hour exists for some region, so a check across all regions sees no gap.
+    assert store.read()["period_start_utc"].n_unique() == full // 3
+    api.missing_regions.clear()
+    api.requests.clear()
+    run_ingest(settings, fetcher, now, ["regional"], repair_gaps=True)
+    assert api.requests[0].endswith("/regional/intensity/2026-02-03T10:30Z/2026-02-03T11:30Z")
+    assert store.read().height == full
+    assert regional_mix_store(settings.raw_dir).read().height == full * 9
+
+
 def test_rejects_unknown_source_and_naive_time(
     settings_factory: Callable[..., Settings], fetcher_factory: Callable[..., HttpFetcher]
 ) -> None:

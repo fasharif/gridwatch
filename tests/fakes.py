@@ -41,6 +41,8 @@ class FakeCarbonApi:
     """Callable httpx handler; pass ``httpx.MockTransport(FakeCarbonApi())``."""
 
     missing: set[datetime] = field(default_factory=set)
+    # (region id, half-hour start) pairs the regional endpoint leaves out
+    missing_regions: set[tuple[int, datetime]] = field(default_factory=set)
     fail_on: dict[int, int] = field(default_factory=dict)  # request number -> status
     actual_offset: int = 0  # add to actual values, to simulate revisions
     requests: list[str] = field(default_factory=list)
@@ -131,6 +133,7 @@ class FakeCarbonApi:
                     ],
                 }
                 for rid, name in REGIONS
+                if (rid, p) not in self.missing_regions
             ]
             data.append(
                 {"from": p.strftime(FMT), "to": (p + HALF_HOUR).strftime(FMT), "regions": regions}

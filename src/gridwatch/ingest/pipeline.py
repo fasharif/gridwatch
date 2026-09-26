@@ -119,6 +119,23 @@ def _json(response_text: str, url: str) -> object:
         raise ci.ParseError(f"{url} did not return JSON: {exc}") from exc
 
 
+def stored_gaps(store: ParquetStore, partition_by: str | None = None) -> list[ci.Window]:
+    """Holes inside the stored history, as windows to request again.
+
+    With ``partition_by`` (the regional store's ``region_id``) each partition is checked on
+    its own, like the dbt gap test, so a half-hour missing for one region only is found too.
+    The regional endpoint returns every region at once, so the windows are merged.
+    """
+    if partition_by is None:
+        return ci.internal_gaps(store.distinct_times())
+    gaps = [
+        gap
+        for times in store.distinct_times_by(partition_by).values()
+        for gap in ci.internal_gaps(times)
+    ]
+    return ci.merge_windows(gaps)
+
+
 def _ingest_ranges(
     name: str,
     dataset: ci.Dataset,
@@ -129,6 +146,7 @@ def _ingest_ranges(
     settings: Settings,
     now: datetime,
     repair_gaps: bool,
+    gap_partition: str | None = None,
 ) -> DatasetReport:
     report = DatasetReport(name)
     lo, hi = stores[0].time_bounds()
@@ -136,7 +154,7 @@ def _ingest_ranges(
         configured_start, lo, hi, now, timedelta(days=settings.refetch_days)
     )
     if repair_gaps:
-        gaps = ci.internal_gaps(stores[0].distinct_times())
+        gaps = stored_gaps(stores[0], gap_partition)
         log.info("%s: re-requesting %d internal gap(s)", name, len(gaps))
         windows = gaps + windows
     report.windows = [f"{w.start:%Y-%m-%dT%H:%MZ}/{w.end:%Y-%m-%dT%H:%MZ}" for w in windows]
@@ -203,6 +221,7 @@ def ingest_regional(
         settings,
         now,
         repair_gaps,
+        gap_partition="region_id",
     )
 
 

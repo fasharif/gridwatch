@@ -196,3 +196,12 @@ def test_internal_gaps() -> None:
         utc(2026, 1, 1, 2, 30),
     ]
     assert ci.internal_gaps(starts) == [ci.Window(utc(2026, 1, 1, 1), utc(2026, 1, 1, 2))]
+
+
+def test_merge_windows_joins_overlapping_and_touching_windows() -> None:
+    a = ci.Window(utc(2026, 1, 1, 1), utc(2026, 1, 1, 2))
+    b = ci.Window(utc(2026, 1, 1, 2), utc(2026, 1, 1, 3))  # touches a
+    c = ci.Window(utc(2026, 1, 1, 2, 30), utc(2026, 1, 1, 4))  # overlaps b
+    d = ci.Window(utc(2026, 1, 1, 6), utc(2026, 1, 1, 7))
+    assert ci.merge_windows([d, c, a, b]) == [ci.Window(a.start, c.end), d]
+    assert ci.merge_windows([]) == []

@@ -101,6 +101,25 @@ class ParquetStore:
         )
         return [value.replace(tzinfo=UTC) for value in series.to_list()]
 
+    def distinct_times_by(self, column: str) -> dict[object, list[datetime]]:
+        """Distinct times for each value of ``column`` (for example each region), sorted."""
+        if column not in self.schema:
+            raise ValueError(f"{column!r} is not a column of {self.root.name}")
+        files = self.files()
+        if not files:
+            return {}
+        frame = (
+            pl.scan_parquet([str(p) for p in files])
+            .select(column, self.time_column)
+            .unique()
+            .sort(column, self.time_column)
+            .collect()
+        )
+        return {
+            key[0]: [value.replace(tzinfo=UTC) for value in part[self.time_column].to_list()]
+            for key, part in frame.group_by(column, maintain_order=True)
+        }
+
     def _conform(self, frame: pl.DataFrame) -> pl.DataFrame:
         extra = set(frame.columns) - set(self.schema)
         missing = set(self.schema) - set(frame.columns)
