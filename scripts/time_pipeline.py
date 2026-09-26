@@ -1,9 +1,20 @@
-"""Time each pipeline step on the recorded fixture and write docs/generated/timings.md.
+"""Time each pipeline step and write the table to docs/generated/.
 
-The workload is fixed (the replayed cassette, a 30-day training window and a 7-day
-backtest), so results are comparable between machines. Run it on an otherwise idle machine:
+Two workloads:
+
+- ``fixture`` (default): the replayed cassette, a 30-day training window and a 7-day
+  backtest. Fixed and offline, so results compare across machines. Writes
+  docs/generated/timings.md.
+- ``full``: a first run against the live API and Ember from an empty data directory: the
+  full backfill since 2017, the dbt build over every regional row, the 48-hour forecast and
+  the 365-day backtest with 14 retrains. Needs network access and takes long; it is the
+  workload that decides whether the daily workflow fits its time limit. Writes
+  docs/generated/timings-full.md.
+
+Run it on an otherwise idle machine:
 
     uv run python scripts/time_pipeline.py --repeats 3
+    uv run python scripts/time_pipeline.py --workload full
 """
 
 from __future__ import annotations
@@ -20,7 +31,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGET = ROOT / "docs" / "generated" / "timings.md"
+TARGETS = {
+    "fixture": ROOT / "docs" / "generated" / "timings.md",
+    "full": ROOT / "docs" / "generated" / "timings-full.md",
+}
+DESCRIPTIONS = {
+    "fixture": "the recorded fixture (59 days of GB data, 30-day training window, 7-day backtest)",
+    "full": "a first run against the live API and Ember from an empty data directory",
+}
 
 
 def fixture_env() -> dict[str, str]:
@@ -35,7 +53,34 @@ def fixture_env() -> dict[str, str]:
     return values
 
 
-def steps(as_of: str, scratch: Path) -> list[tuple[str, list[str]]]:
+def steps(workload: str, env: dict[str, str], scratch: Path) -> list[tuple[str, list[str]]]:
+    outputs = [
+        ("report", ["report", "--out", str(scratch / "report.md")]),
+        (
+            "export",
+            [
+                "export",
+                "--annual-csv",
+                str(scratch / "annual.csv"),
+                "--powerbi-dir",
+                str(scratch / "site" / "downloads" / "powerbi"),
+            ],
+        ),
+        ("docs (dbt docs generate)", ["docs", "--out", str(scratch / "site" / "dbt")]),
+        (
+            "site",
+            ["site", "--out", str(scratch / "site"), "--annual-csv", str(scratch / "annual.csv")],
+        ),
+    ]
+    if workload == "full":
+        return [
+            ("ingest (full backfill from the live API)", ["ingest"]),
+            ("transform (dbt build and tests)", ["transform"]),
+            ("forecast (train and predict)", ["forecast"]),
+            ("backtest (365 origins, 14 retrains)", ["backtest"]),
+            *outputs,
+        ]
+    as_of = env["FIXTURE_AS_OF"]
     return [
         (
             "ingest (replayed cassette)",
@@ -47,30 +92,17 @@ def steps(as_of: str, scratch: Path) -> list[tuple[str, list[str]]]:
             "backtest (7 origins)",
             ["backtest", "--train-days", "30", "--test-days", "7", "--retrain-every", "7"],
         ),
-        ("report", ["report", "--out", str(scratch / "report.md")]),
-        (
-            "export",
-            [
-                "export",
-                "--annual-csv",
-                str(scratch / "annual.csv"),
-                "--powerbi-dir",
-                str(scratch / "powerbi"),
-            ],
-        ),
-        (
-            "site",
-            ["site", "--out", str(scratch / "site"), "--annual-csv", str(scratch / "annual.csv")],
-        ),
+        *outputs,
     ]
 
 
-def run_once(env_values: dict[str, str]) -> dict[str, float]:
+def run_once(workload: str) -> dict[str, float]:
+    env_values = fixture_env() if workload == "fixture" else {}
     durations: dict[str, float] = {}
     with tempfile.TemporaryDirectory() as tmp:
         scratch = Path(tmp)
         env = {**os.environ, **env_values, "GRIDWATCH_DATA_DIR": str(scratch / "data")}
-        for name, args in steps(env_values["FIXTURE_AS_OF"], scratch):
+        for name, args in steps(workload, env_values, scratch):
             start = time.perf_counter()
             subprocess.run(
                 [sys.executable, "-m", "gridwatch.cli", *args],
@@ -85,24 +117,29 @@ def run_once(env_values: dict[str, str]) -> dict[str, float]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
-    parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument("--workload", choices=sorted(TARGETS), default="fixture")
+    parser.add_argument("--repeats", type=int, default=None, help="default: 3 fixture, 1 full")
     args = parser.parse_args()
-    runs = [run_once(fixture_env()) for _ in range(args.repeats)]
+    repeats = args.repeats or (3 if args.workload == "fixture" else 1)
+    if repeats < 1:
+        parser.error("--repeats must be at least 1")
+    runs = [run_once(args.workload) for _ in range(repeats)]
     lines = [
-        "# Pipeline timings",
+        f"# Pipeline timings: {args.workload} workload",
         "",
-        f"Measured by `scripts/time_pipeline.py --repeats {args.repeats}` on "
-        f"{datetime.now(UTC):%Y-%m-%d} (UTC): {platform.platform()}, Python "
-        f"{platform.python_version()}, {os.cpu_count()} logical CPUs. Median of "
-        f"{args.repeats} runs on the recorded fixture.",
+        f"Measured by `scripts/time_pipeline.py --workload {args.workload} --repeats {repeats}` "
+        f"on {datetime.now(UTC):%Y-%m-%d} (UTC): {platform.platform()}, Python "
+        f"{platform.python_version()}, {os.cpu_count()} logical CPUs. Median of {repeats} "
+        f"run(s) on {DESCRIPTIONS[args.workload]}.",
         "",
         "| Step | Median seconds |",
         "| --- | ---: |",
     ]
     for name in runs[0]:
         lines.append(f"| {name} | {statistics.median(r[name] for r in runs):.1f} |")
-    TARGET.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
-    print(TARGET.read_text(encoding="utf-8"))
+    target = TARGETS[args.workload]
+    target.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    print(target.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
