@@ -231,3 +231,17 @@ def test_render_writes_a_self_contained_site(tmp_path: Path) -> None:
     ).replace("https://carbonintensity.org.uk", "")
     assert (tmp_path / "site" / "assets" / "plotly.min.js").stat().st_size > 1_000_000
     assert (tmp_path / "site" / "data" / "annual_grid_intensity.csv").exists()
+
+
+def test_text_in_the_markup_is_escaped(tmp_path: Path) -> None:
+    data = sample_data()
+    data.kpis["best_start"] = "<script>alert(1)</script>"
+    data.report_window["start_date"] = "2026 & <b>on</b>"
+    html = render(data, tmp_path / "site").read_text(encoding="utf-8")
+    assert "<script>alert(1)</script>" not in html
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html
+    assert "2026 &amp; &lt;b&gt;on&lt;/b&gt;" in html
+    # the chart data is still valid JSON inside its script element
+    start = html.index('<script type="application/json" id="chart-data">')
+    body = html[start:].split(">", 1)[1].split("</script>", 1)[0]
+    assert json.loads(body)[0]["id"] == "next48"

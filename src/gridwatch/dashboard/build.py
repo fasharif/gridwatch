@@ -13,7 +13,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
-from jinja2 import Environment, PackageLoader, select_autoescape
+from jinja2 import Environment, PackageLoader
 from plotly.offline import get_plotlyjs
 
 from gridwatch.dashboard.data import DashboardData, collect
@@ -102,9 +102,11 @@ def kpi_tiles(data: DashboardData) -> list[dict[str, str]]:
 
 
 def render(data: DashboardData, out_dir: Path, annual_csv: Path | None = None) -> Path:
+    # Always escape: select_autoescape(["html"]) would not match "index.html.j2". The chart
+    # JSON is escaped for its <script> element separately and marked safe in the template.
     env = Environment(
         loader=PackageLoader("gridwatch.dashboard", "templates"),
-        autoescape=select_autoescape(["html"]),
+        autoescape=True,
         keep_trailing_newline=True,
     )
     charts = [c.as_dict() for c in all_charts(data, int(data.report_window["batch_job_hours"]))]
