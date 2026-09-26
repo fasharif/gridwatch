@@ -67,7 +67,16 @@ naive UTC. Each row carries `fetched_at_utc`.
   temporary name and renamed. A failed run says how many requests succeeded and resumes on the
   next run.
 - **Ember** is downloaded with a conditional GET (`If-None-Match`, `If-Modified-Since`), so a
-  daily run downloads the 16 MB file only when Ember has published a new version.
+  daily run downloads the 16 MB file only when Ember has published a new version. If the
+  download or the file's format fails and a copy is already stored, the run logs a warning,
+  keeps that copy (status `failed-kept-previous` in the ingest report) and carries on with
+  the GB data. With no stored copy the run stops.
+- **Forecast snapshots** are the one dataset the API cannot give back: it keeps only its
+  latest forecast for each half-hour. `gridwatch site` publishes the snapshot files with a
+  manifest of row counts and SHA-256 hashes under `data/forecast_snapshots/` on the
+  dashboard, and `gridwatch restore-snapshots URL` merges them back into `data/raw/` with the
+  same idempotent upsert. The daily workflow restores them before it ingests (see
+  [decision 12](decisions.md#12-keeping-history-between-scheduled-runs)).
 
 The full history (September 2017 to September 2026, regional from 2023) takes about 27 MB of
 Parquet.
@@ -100,6 +109,30 @@ They stay null; the gap-free fact table marks them with `is_actual_missing`.
 values for some areas gridwatch does not compare (for example Costa Rica's total emissions).
 Staging tests over all areas report these as warnings; the strict tests sit on the country
 marts, which contain only the compared areas.
+
+**Bank holidays.** `dim_date` takes England and Wales bank holidays from
+`dbt/seeds/uk_bank_holidays.csv`, generated for 2017 to 2028 from the `holidays` package (the
+forecast uses the same package directly). A warn-level test fires once the calendar reaches
+the seed's last year, and an error-level test fails the build when the calendar goes beyond
+it. To extend it, raise `LAST_YEAR` in `scripts/generate_bank_holidays.py`, run
+`uv run python scripts/generate_bank_holidays.py` and commit the seed.
+
+### When the gap test fails
+
+The API has had a new permanent outage roughly once a year (the seed above). When the next
+one happens, `no_half_hour_gaps` fails with error severity, so the daily build stops before
+the Pages deploy and the dashboard keeps showing the last good build until the gap is
+recorded. That is deliberate: an unrecorded gap could just as well be an ingestion fault.
+
+1. Read the failing test's rows in the workflow log (or run `uv run gridwatch transform`
+   locally): `gap_after_utc`, `resumes_at_utc` and `missing_periods` for the dataset.
+2. Re-request the hole: `uv run gridwatch ingest --repair-gaps`, then `uv run gridwatch
+   transform`. If the test passes, it was a transient fetch problem and nothing else is
+   needed (the daily workflow can be run by hand to publish).
+3. If the gap is still there, check the API directly for that range to confirm it is
+   upstream, then add a row to `dbt/seeds/known_source_gaps.csv` with the dataset, the two
+   timestamps, the number of missing half-hours and a note with the date of the check.
+4. Commit the seed. The next scheduled run (or a manual one) builds and deploys again.
 
 ## Warehouse layout
 
