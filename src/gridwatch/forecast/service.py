@@ -7,6 +7,7 @@ import logging
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import polars as pl
@@ -76,19 +77,47 @@ def summary_json(result: BacktestResult, config: BacktestConfig) -> dict[str, ob
     }
 
 
+def validation_suffix(until: datetime, config: BacktestConfig) -> str:
+    """File-name suffix of a validation run: the cutoff and the settings being compared.
+
+    Each combination of training window and calibration period gets its own files, so a
+    run never overwrites the result of another one.
+    """
+    return (
+        f"_until_{until:%Y%m%d}_train{config.model.train_days}_cal{config.model.calibration_days}"
+    )
+
+
+def validation_summaries(outputs_dir: Path) -> list[dict[str, Any]]:
+    """Every stored validation-run summary (``backtest --until``), oldest cutoff first."""
+    summaries = [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted(outputs_dir.glob("backtest_summary_until_*.json"))
+    ]
+    return sorted(
+        summaries,
+        key=lambda s: (
+            str(s.get("until_utc")),
+            s["config"]["model"]["train_days"],
+            s["config"]["model"]["calibration_days"],
+        ),
+    )
+
+
 def run_backtest_job(
     settings: Settings, config: BacktestConfig, until: datetime | None = None
 ) -> dict[str, object]:
     """Run the backtest and write its outputs.
 
     With ``until`` only data before that time is used (for choosing settings on a period
-    before the test year), and the outputs get a suffix so the main results are kept.
+    before the test year), and the outputs get a suffix naming the cutoff and the settings,
+    so the main results and other validation runs are kept.
     """
     series = load_national_series(settings.warehouse_path)
     suffix = ""
     if until is not None:
         series = series.truncate(until)
-        suffix = f"_until_{until:%Y%m%d}"
+        suffix = validation_suffix(until, config)
     result = run_backtest(series, config)
     settings.outputs_dir.mkdir(parents=True, exist_ok=True)
     predictions_name = BACKTEST_PREDICTIONS_FILE.replace(".parquet", f"{suffix}.parquet")

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from itertools import pairwise
+from pathlib import Path
 
 import numpy as np
 import polars as pl
@@ -20,7 +22,7 @@ from gridwatch.forecast.data import NationalSeries, SeriesError
 from gridwatch.forecast.features import MAX_HORIZON
 from gridwatch.forecast.metrics import score
 from gridwatch.forecast.model import IntensityForecaster, ModelConfig, NotEnoughHistoryError
-from gridwatch.forecast.service import forecast_next
+from gridwatch.forecast.service import forecast_next, validation_suffix, validation_summaries
 from tests.helpers import synthetic_series
 
 SMALL = ModelConfig(train_days=40, origin_step=6, max_iter=60, calibration_days=8)
@@ -204,3 +206,31 @@ def test_truncate_keeps_data_before_cutoff() -> None:
     assert cut.timestamp(len(cut) - 1) == datetime(2025, 1, 4, 23, 30)
     with pytest.raises(SeriesError, match="no data before"):
         series.truncate(datetime(2024, 12, 1, tzinfo=UTC))
+
+
+def test_validation_runs_with_different_settings_keep_separate_files(tmp_path: Path) -> None:
+    until = datetime(2025, 9, 24, tzinfo=UTC)
+    configs = [
+        BacktestConfig(test_days=84, model=ModelConfig(train_days=days, calibration_days=cal))
+        for days, cal in ((730, 56), (365, 56), (730, 0))
+    ]
+    suffixes = [validation_suffix(until, c) for c in configs]
+    assert suffixes[0] == "_until_20250924_train730_cal56"
+    assert len(set(suffixes)) == len(suffixes)
+    for suffix, config in zip(suffixes, configs, strict=True):
+        summary = {
+            "until_utc": "2025-09-24T00:00Z",
+            "config": {
+                "model": {
+                    "train_days": config.model.train_days,
+                    "calibration_days": config.model.calibration_days,
+                }
+            },
+        }
+        (tmp_path / f"backtest_summary{suffix}.json").write_text(json.dumps(summary))
+    (tmp_path / "backtest_summary.json").write_text("{}")  # the main run is not a validation
+    found = validation_summaries(tmp_path)
+    assert [
+        (s["config"]["model"]["train_days"], s["config"]["model"]["calibration_days"])
+        for s in found
+    ] == [(365, 56), (730, 0), (730, 56)]
