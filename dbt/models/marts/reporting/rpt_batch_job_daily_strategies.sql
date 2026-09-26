@@ -11,6 +11,10 @@
 --                      its latest, short-lead forecast for past periods, so this is an
 --                      optimistic stand-in for a day-ahead forecast.
 --   oracle             the best start with perfect knowledge (a lower bound, not a plan)
+--
+-- When two starts tie (intensities are whole numbers, so equal means happen), every rule takes
+-- the earliest start. arg_min would pick one arbitrarily, and the choice could change from one
+-- build to the next.
 with jobs as (
     select * from {{ ref('int_batch_job_windows') }}
 ),
@@ -36,9 +40,12 @@ trailing_profile as (
 ),
 
 profile_choice as (
-    select job_start_date, arg_min(time_key, trailing_mean) as profile_time_key
+    select
+        job_start_date,
+        first(time_key order by trailing_mean, time_key) as profile_time_key
     from trailing_profile
     where trailing_days >= {{ (lookback * 0.7) | round | int }}
+      and trailing_mean is not null
     group by job_start_date
 ),
 
@@ -51,10 +58,13 @@ per_day as (
         max(jobs.job_actual_avg) filter (where jobs.time_key = 18) as fixed_0900,
         max(jobs.job_actual_avg) filter (where jobs.time_key = 34) as fixed_1700,
         avg(jobs.job_actual_avg) as any_start,
-        arg_min(jobs.job_actual_avg, jobs.job_forecast_avg) as forecast_guided,
-        arg_min(jobs.time_key, jobs.job_forecast_avg) as forecast_time_key,
+        first(jobs.job_actual_avg order by jobs.job_forecast_avg, jobs.time_key)
+            filter (where jobs.job_forecast_avg is not null) as forecast_guided,
+        first(jobs.time_key order by jobs.job_forecast_avg, jobs.time_key)
+            filter (where jobs.job_forecast_avg is not null) as forecast_time_key,
         min(jobs.job_actual_avg) as oracle,
-        arg_min(jobs.time_key, jobs.job_actual_avg) as oracle_time_key
+        first(jobs.time_key order by jobs.job_actual_avg, jobs.time_key)
+            filter (where jobs.job_actual_avg is not null) as oracle_time_key
     from jobs
     group by jobs.job_start_date, jobs.date_key
 ),

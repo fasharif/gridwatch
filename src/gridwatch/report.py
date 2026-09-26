@@ -298,9 +298,11 @@ def build_report(warehouse: Path, outputs_dir: Path, raw_dir: Path | None = None
             con,
             """
             select season,
-                   arg_min(start_time_label, mean_actual_gco2_kwh) as lowest_half_hour,
+                   first(start_time_label order by mean_actual_gco2_kwh, start_time_label)
+                       as lowest_half_hour,
                    min(mean_actual_gco2_kwh) as lowest_mean,
-                   arg_max(start_time_label, mean_actual_gco2_kwh) as highest_half_hour,
+                   first(start_time_label order by mean_actual_gco2_kwh desc, start_time_label)
+                       as highest_half_hour,
                    max(mean_actual_gco2_kwh) as highest_mean
             from reporting.rpt_gb_seasonal_profile
             group by season

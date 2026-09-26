@@ -21,3 +21,33 @@ unit_tests:
         - {strategy: profile_guided, days: 2, mean_job_gco2_kwh: 75, saving_vs_1700_pct: 62.5, kg_co2_per_run: 30}
         - {strategy: forecast_guided, days: 2, mean_job_gco2_kwh: 75, saving_vs_1700_pct: 62.5, kg_co2_per_run: 30}
         - {strategy: oracle, days: 2, mean_job_gco2_kwh: 60, saving_vs_1700_pct: 70, kg_co2_per_run: 24}
+
+  - name: scheduling_rules_break_ties_by_the_earliest_start
+    description: >
+      Slots 10 and 20 tie for the lowest intensity every day, in the trailing profile, the
+      forecast and the actuals. Every rule must take slot 10, whatever order the rows arrive in
+      (the fixture lists slot 20 first).
+    model: rpt_batch_job_daily_strategies
+    given:
+      - input: ref('int_batch_job_windows')
+        format: sql
+        rows: |
+          select
+              cast(timestamp '2026-01-01 00:00:00' + to_days(cast(d as integer))
+                   + to_minutes(cast(30 * k as integer)) as timestamp) as job_start_utc,
+              cast(timestamp '2026-01-01 00:00:00' + to_days(cast(d as integer))
+                   + to_minutes(cast(30 * k as integer)) as timestamp) as job_start_local,
+              cast(date '2026-01-01' + cast(d as integer) as date) as job_start_date,
+              cast(strftime(date '2026-01-01' + cast(d as integer), '%Y%m%d') as integer) as date_key,
+              cast(k as integer) as time_key,
+              cast(case when k in (10, 20) then 50 else 100 end as double) as job_actual_avg,
+              cast(case when k in (10, 20) then 50 else 100 end as double) as job_forecast_avg
+          from range(40) as days(d)
+          cross join range(48) as slots(k)
+          order by d, case k when 20 then -2 when 10 then -1 else k end
+      - input: ref('rpt_report_window')
+        rows:
+          - {start_date: "2026-02-05", end_date: "2026-02-05", days: 1, batch_job_hours: 4}
+    expect:
+      rows:
+        - {job_start_date: "2026-02-05", profile_time_key: 10, profile_guided: 50, forecast_time_key: 10, forecast_guided: 50, oracle_time_key: 10, oracle: 50}
