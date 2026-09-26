@@ -213,7 +213,8 @@ def test_every_chart_has_a_spec_and_table() -> None:
 def test_kpi_tiles_include_the_model_when_backtested() -> None:
     tiles = kpi_tiles(sample_data())
     assert tiles[-1]["value"] == "42.5"
-    assert "47.9" in tiles[-1]["detail"]
+    # for the 24-48 h band this baseline is two days before the target, not "yesterday"
+    assert tiles[-1]["detail"] == "Same half-hour, last known day: 47.9"
     assert tiles[1]["value"] == "10:30"
 
 

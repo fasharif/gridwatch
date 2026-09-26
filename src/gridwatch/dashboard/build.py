@@ -95,7 +95,7 @@ def kpi_tiles(data: DashboardData) -> list[dict[str, str]]:
                 "label": "Model error, 24-48 h ahead",
                 "value": _fmt(model["mae"], 1),
                 "unit": "gCO2/kWh MAE",
-                "detail": f"Same half-hour yesterday: {_fmt(naive['mae'], 1)}",
+                "detail": f"Same half-hour, last known day: {_fmt(naive['mae'], 1)}",
             }
         )
     return tiles

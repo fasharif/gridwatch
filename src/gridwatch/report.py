@@ -381,7 +381,7 @@ def _backtest_section(path: Path) -> list[str]:
         "",
         markdown_table(
             pl.DataFrame(summary["monthly_mae_24_48h"]),
-            ["Month", "Pairs", "Model", "Naive yesterday", "Naive last week", "API"],
+            ["Month", "Pairs", "Model", "Naive last known day", "Naive last week", "API"],
         ),
         "",
     ]
