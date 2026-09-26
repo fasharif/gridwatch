@@ -227,7 +227,10 @@ def cmd_run(args: argparse.Namespace, settings: Settings) -> int:
             ),
         ),
         ("transform", argparse.Namespace(as_of=args.as_of, report_start=None, report_end=None)),
-        ("forecast", argparse.Namespace(train_days=args.train_days)),
+        (
+            "forecast",
+            argparse.Namespace(train_days=args.train_days, calibration_days=args.calibration_days),
+        ),
     ]
     if not args.skip_backtest:
         steps.append(
@@ -235,6 +238,7 @@ def cmd_run(args: argparse.Namespace, settings: Settings) -> int:
                 "backtest",
                 argparse.Namespace(
                     train_days=args.train_days,
+                    calibration_days=args.calibration_days,
                     test_days=args.test_days,
                     retrain_every=BacktestConfig.retrain_every_days,
                     origin_hour=BacktestConfig.origin_hour_utc,

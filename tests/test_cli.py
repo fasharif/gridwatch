@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import argparse
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
@@ -7,6 +9,7 @@ import pytest
 
 from gridwatch.cli import build_parser, main
 from gridwatch.config import Settings
+from gridwatch.forecast.model import ModelConfig
 from gridwatch.transform import TransformError, check_inputs
 
 
@@ -143,3 +146,29 @@ def test_unexpected_database_error_is_one_line(
     assert main(["report", "--out", str(tmp_path / "report.md")]) == 2
     assert "IOException: Could not set lock on file" in caplog.text
     assert "Traceback" not in caplog.text
+
+
+def test_run_passes_model_settings_to_forecast_and_backtest(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from gridwatch import cli
+
+    seen: dict[str, object] = {}
+
+    def record(name: str) -> Callable[[argparse.Namespace, Settings], int]:
+        def handler(args: argparse.Namespace, settings: Settings) -> int:
+            if name in ("forecast", "backtest"):
+                seen[name] = cli._model_config(args)
+            return 0
+
+        return handler
+
+    for name in ("ingest", "transform", "forecast", "backtest", "export", "site"):
+        monkeypatch.setattr(cli, f"cmd_{name}", record(name))
+    monkeypatch.setenv("GRIDWATCH_DATA_DIR", str(tmp_path))
+    assert main(["run", "--train-days", "60", "--calibration-days", "0"]) == 0
+    for name in ("forecast", "backtest"):
+        config = seen[name]
+        assert isinstance(config, ModelConfig)
+        assert config.train_days == 60
+        assert config.calibration_days == 0
