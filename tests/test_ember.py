@@ -7,9 +7,10 @@ from pathlib import Path
 import httpx
 import pytest
 
-from gridwatch.config import EMBER_YEARLY_CSV
+from gridwatch.config import EMBER_YEARLY_CSV, Settings
 from gridwatch.ingest.ember import EmberFormatError, ingest_ember_yearly, parse_yearly_csv
 from gridwatch.ingest.http import HttpFetcher
+from gridwatch.ingest.pipeline import IngestError, ingest_ember
 from tests.helpers import cassette_body
 
 NOW = datetime(2026, 9, 20, tzinfo=UTC)
@@ -85,3 +86,34 @@ def test_unchanged_content_without_etag_is_not_rewritten(
     stamp = target.stat().st_mtime_ns
     assert ingest_ember_yearly(fetcher, EMBER_YEARLY_CSV, tmp_path, NOW).status == "not-modified"
     assert target.stat().st_mtime_ns == stamp
+
+
+def test_failed_download_keeps_the_previous_file(
+    settings_factory: Callable[..., Settings],
+    fetcher_factory: Callable[..., HttpFetcher],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    settings = settings_factory()
+    good = fetcher_factory(
+        httpx.MockTransport(lambda request: httpx.Response(200, content=csv_body()))
+    )
+    first = ingest_ember(good, settings, NOW)
+    moved = fetcher_factory(httpx.MockTransport(lambda request: httpx.Response(404)))
+    kept = ingest_ember(moved, settings, NOW)
+    assert kept.status == "failed-kept-previous"
+    assert (kept.rows, kept.sha256) == (first.rows, first.sha256)
+    assert kept.error is not None
+    assert "HTTP 404" in kept.error
+    assert "Keeping the file fetched at" in caplog.text
+    reshaped = fetcher_factory(
+        httpx.MockTransport(lambda request: httpx.Response(200, content=b"Area,Year\nX,2024\n"))
+    )
+    assert ingest_ember(reshaped, settings, NOW).status == "failed-kept-previous"
+
+
+def test_failed_first_download_stops_the_run(
+    settings_factory: Callable[..., Settings], fetcher_factory: Callable[..., HttpFetcher]
+) -> None:
+    fetcher = fetcher_factory(httpx.MockTransport(lambda request: httpx.Response(404)))
+    with pytest.raises(IngestError, match="No earlier Ember file is stored"):
+        ingest_ember(fetcher, settings_factory(), NOW)

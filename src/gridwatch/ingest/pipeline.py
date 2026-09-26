@@ -13,7 +13,12 @@ import polars as pl
 
 from gridwatch.config import Settings
 from gridwatch.ingest import carbon_intensity as ci
-from gridwatch.ingest.ember import EmberResult, ingest_ember_yearly
+from gridwatch.ingest.ember import (
+    EmberFormatError,
+    EmberResult,
+    ingest_ember_yearly,
+    previous_download,
+)
 from gridwatch.ingest.http import FetchError, HttpFetcher
 from gridwatch.ingest.storage import ParquetStore, UpsertStats, write_placeholder
 
@@ -219,6 +224,28 @@ def ingest_snapshot(
     return report
 
 
+def ingest_ember(fetcher: HttpFetcher, settings: Settings, now: datetime) -> EmberResult:
+    """Fetch Ember's yearly file, falling back to the stored copy if that fails.
+
+    Ember publishes a few times a month and the GB datasets do not depend on it, so a moved
+    URL or a changed format should not stop the daily GB update. With a stored copy the
+    failure becomes a warning; with none there is nothing to fall back on and the run stops.
+    """
+    try:
+        return ingest_ember_yearly(fetcher, settings.ember_yearly_url, settings.raw_dir, now)
+    except (FetchError, EmberFormatError) as exc:
+        previous = previous_download(settings.raw_dir)
+        if previous is None:
+            raise IngestError(f"ember: {exc}. No earlier Ember file is stored.") from exc
+        log.warning(
+            "ember: %s. Keeping the file fetched at %s (SHA-256 %s).",
+            exc,
+            previous.fetched_at_utc,
+            previous.sha256[:12],
+        )
+        return EmberResult("failed-kept-previous", previous.rows, previous.sha256, str(exc))
+
+
 def run_ingest(
     settings: Settings,
     fetcher: HttpFetcher,
@@ -246,9 +273,7 @@ def run_ingest(
     }
     for source in selected:
         if source == "ember":
-            report.ember = ingest_ember_yearly(
-                fetcher, settings.ember_yearly_url, settings.raw_dir, now
-            )
+            report.ember = ingest_ember(fetcher, settings, now)
             log.info("ember: %s (%d rows)", report.ember.status, report.ember.rows)
             continue
         dataset_report = runners[source](fetcher, settings, now, repair_gaps)

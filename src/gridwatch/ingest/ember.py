@@ -66,9 +66,23 @@ class EmberManifest:
 
 @dataclass(frozen=True)
 class EmberResult:
-    status: str  # "downloaded" or "not-modified"
+    status: str  # "downloaded", "not-modified" or "failed-kept-previous"
     rows: int
     sha256: str
+    error: str | None = None
+
+
+def _paths(raw_dir: Path) -> tuple[Path, Path]:
+    target_dir = raw_dir / "ember" / "yearly_electricity"
+    return target_dir / "manifest.json", target_dir / "yearly_electricity.parquet"
+
+
+def previous_download(raw_dir: Path) -> EmberManifest | None:
+    """The manifest of the Ember file already stored, if there is one."""
+    manifest_path, parquet_path = _paths(raw_dir)
+    if not parquet_path.exists():
+        return None
+    return EmberManifest.load(manifest_path)
 
 
 def parse_yearly_csv(content: bytes) -> pl.DataFrame:
@@ -109,9 +123,7 @@ def ingest_ember_yearly(
     fetcher: HttpFetcher, url: str, raw_dir: Path, now: datetime | None = None
 ) -> EmberResult:
     """Download the yearly CSV if it changed and store it as Parquet."""
-    target_dir = raw_dir / "ember" / "yearly_electricity"
-    manifest_path = target_dir / "manifest.json"
-    parquet_path = target_dir / "yearly_electricity.parquet"
+    manifest_path, parquet_path = _paths(raw_dir)
     manifest = EmberManifest.load(manifest_path)
     headers: dict[str, str] = {}
     if manifest is not None and parquet_path.exists() and manifest.url == url:
