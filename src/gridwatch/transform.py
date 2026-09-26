@@ -20,7 +20,16 @@ from typing import Any
 
 from gridwatch.config import Settings
 
-PROJECT_DIR = Path(__file__).resolve().parents[2] / "dbt"
+
+def _project_dir() -> Path:
+    """The dbt project: packaged inside the wheel, or at the root of a source checkout."""
+    packaged = Path(__file__).resolve().parent / "dbt_project"
+    if (packaged / "dbt_project.yml").exists():
+        return packaged
+    return Path(__file__).resolve().parents[2] / "dbt"
+
+
+PROJECT_DIR = _project_dir()
 FAILED = frozenset({"error", "fail", "runtime error"})
 
 

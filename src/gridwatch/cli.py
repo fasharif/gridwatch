@@ -29,7 +29,9 @@ from gridwatch.ingest.pipeline import (
 from gridwatch.ingest.snapshot_mirror import SnapshotMirrorError
 from gridwatch.transform import TransformError, generate_docs, run_dbt
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+# Default output paths are relative to the working directory, like GRIDWATCH_DATA_DIR, so the
+# command behaves the same from a checkout and from an installed wheel.
+ANNUAL_CSV = "exports/annual_grid_intensity.csv"
 
 log = logging.getLogger("gridwatch")
 
@@ -382,13 +384,11 @@ def build_parser() -> argparse.ArgumentParser:
     backtest.set_defaults(func=cmd_backtest)
 
     report = sub.add_parser("report", help="write the Markdown tables behind docs/findings.md")
-    report.add_argument("--out", default=str(REPO_ROOT / "docs" / "generated" / "report.md"))
+    report.add_argument("--out", default="docs/generated/report.md")
     report.set_defaults(func=cmd_report)
 
     export = sub.add_parser("export", help="write the annual intensity CSV and Power BI CSVs")
-    export.add_argument(
-        "--annual-csv", default=str(REPO_ROOT / "exports" / "annual_grid_intensity.csv")
-    )
+    export.add_argument("--annual-csv", default=ANNUAL_CSV)
     export.add_argument(
         "--powerbi-dir", default=None, help="also write the Power BI star schema here"
     )
@@ -401,10 +401,8 @@ def build_parser() -> argparse.ArgumentParser:
     export.set_defaults(func=cmd_export)
 
     site = sub.add_parser("site", help="build the static dashboard")
-    site.add_argument("--out", default=str(REPO_ROOT / "site"))
-    site.add_argument(
-        "--annual-csv", default=str(REPO_ROOT / "exports" / "annual_grid_intensity.csv")
-    )
+    site.add_argument("--out", default="site")
+    site.add_argument("--annual-csv", default=ANNUAL_CSV)
     site.set_defaults(func=cmd_site)
 
     docs = sub.add_parser(
@@ -429,11 +427,9 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--replay", metavar="DIR", help="serve HTTP from a recorded cassette")
     run.add_argument("--skip-backtest", action="store_true")
     run.add_argument("--test-days", type=_int_between(1, 3650), default=BacktestConfig.test_days)
-    run.add_argument(
-        "--annual-csv", default=str(REPO_ROOT / "exports" / "annual_grid_intensity.csv")
-    )
+    run.add_argument("--annual-csv", default=ANNUAL_CSV)
     run.add_argument("--powerbi-dir", default=None)
-    run.add_argument("--site-dir", default=str(REPO_ROOT / "site"))
+    run.add_argument("--site-dir", default="site")
     _add_model_args(run)
     run.set_defaults(func=cmd_run)
     return parser

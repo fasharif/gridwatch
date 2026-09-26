@@ -28,8 +28,11 @@ htmlcov/
 /dbt/logs/
 /logs/
 
-# Built dashboard
+# Built dashboard, and the output folders the CI workflows use
 /site/
+/ci-data/
+/ci-output/
+/site-extra/
 
 # Editors and OS
 .vscode/
