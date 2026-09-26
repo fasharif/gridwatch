@@ -187,7 +187,9 @@ def cmd_report(args: argparse.Namespace, settings: Settings) -> int:
     from gridwatch.report import write_report
 
     _require_warehouse(settings)
-    path = write_report(settings.warehouse_path, settings.outputs_dir, Path(args.out))
+    path = write_report(
+        settings.warehouse_path, settings.outputs_dir, Path(args.out), settings.raw_dir
+    )
     log.info("report tables written to %s", path)
     return 0
 

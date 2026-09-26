@@ -245,3 +245,88 @@ def test_text_in_the_markup_is_escaped(tmp_path: Path) -> None:
     start = html.index('<script type="application/json" id="chart-data">')
     body = html[start:].split(">", 1)[1].split("</script>", 1)[0]
     assert json.loads(body)[0]["id"] == "next48"
+
+
+def test_markdown_table_column_decimals() -> None:
+    frame = pl.DataFrame({"share": [34.51], "ratio": [2.1634], "n": [3]})
+    table = markdown_table(frame, decimals=0, column_decimals={"ratio": 2})
+    assert table.splitlines()[2] == "| 35 | 2.16 | 3 |"
+
+
+def _summary(
+    until: str | None, train: int, cal: int, mae: float, cover: float
+) -> dict[str, object]:
+    return {
+        "until_utc": until,
+        "first_origin_utc": "2025-07-01T00:00Z",
+        "last_origin_utc": "2025-09-22T00:00Z",
+        "origins": 84,
+        "config": {"model": {"train_days": train, "calibration_days": cal}},
+        "metrics": [
+            {"horizon_band": "0-24 h", "method": "model", "mae": mae - 6},
+            {"horizon_band": "24-48 h", "method": "model", "mae": mae},
+            {"horizon_band": "24-48 h", "method": "naive_yesterday", "mae": mae / 0.9},
+            {"horizon_band": "24-48 h", "method": "naive_last_week", "mae": mae / 0.8},
+        ],
+        "interval_coverage": [{"horizon_band": "0-48 h", "coverage_pct": cover}],
+        "model_win_rates_24_48h": [{"compared_with": "naive_yesterday", "model_better_pct": 57.8}],
+    }
+
+
+def test_validation_section_lists_every_stored_run(tmp_path: Path) -> None:
+    from gridwatch.report import _validation_section
+
+    assert "_No validation run stored._" in _validation_section(tmp_path)
+    for train, cal, cover in ((730, 56, 82.07), (730, 0, 71.42), (365, 56, 79.0)):
+        (tmp_path / f"backtest_summary_until_20250924_train{train}_cal{cal}.json").write_text(
+            json.dumps(_summary("2025-09-24T00:00Z", train, cal, 33.72, cover))
+        )
+    table = "\n".join(_validation_section(tmp_path))
+    assert "| 2025-09-24 | 2025-07-01 to 2025-09-22 | 84 | 730 | 0 | 27.7 | 33.7 | 71.4 |" in table
+    assert "| 84 | 730 | 56 | 27.7 | 33.7 | 82.1 |" in table
+    assert table.index("| 365 |") < table.index("| 730 | 0 |") < table.index("| 730 | 56 |")
+
+
+def test_forecast_headline_is_derived_from_the_summary() -> None:
+    from gridwatch.report import _forecast_headline
+
+    figures = dict(_forecast_headline(_summary(None, 730, 56, 42.5, 79.5)))
+    assert figures["Model 24-48 h MAE below the last-known-day baseline (%)"] == "10"
+    assert figures["Model 24-48 h MAE below the last-week baseline (%)"] == "20"
+    assert figures["Days the model lost to the last-known-day baseline, 24-48 h (%)"] == "42.2"
+    assert _forecast_headline(None) == []
+
+
+def test_diebold_mariano_table_from_predictions(tmp_path: Path) -> None:
+    from datetime import datetime, timedelta
+
+    import numpy as np
+
+    from gridwatch.report import _diebold_mariano_table
+
+    assert _diebold_mariano_table(tmp_path / "missing.parquet") is None
+    rng = np.random.default_rng(0)
+    rows = []
+    for day in range(30):
+        origin = datetime(2026, 1, 1) + timedelta(days=day)
+        for horizon in range(1, 97):
+            actual = 150 + rng.normal(0, 20)
+            rows.append(
+                {
+                    "origin_utc": origin,
+                    "horizon": horizon,
+                    "actual": actual,
+                    "model": actual + rng.normal(0, 10),
+                    "naive_yesterday": actual + rng.normal(0, 30),
+                    "naive_last_week": actual + rng.normal(0, 40),
+                    "api_forecast": actual + rng.normal(0, 5),
+                }
+            )
+    path = tmp_path / "predictions.parquet"
+    pl.DataFrame(rows).write_parquet(path)
+    table = _diebold_mariano_table(path)
+    assert table is not None
+    assert table.height == 4
+    assert (table["days"] == 30).all()
+    assert (table["mean_difference"] < 0).all()
+    assert (table["p_value"] == "<0.001").all()
