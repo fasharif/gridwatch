@@ -60,11 +60,11 @@ jobs:
         run: |
           owner="${GITHUB_REPOSITORY_OWNER,,}"
           url="${SNAPSHOT_MIRROR_URL:-https://${owner}.github.io/${GITHUB_REPOSITORY#*/}/data/forecast_snapshots/}"
-          uv run gridwatch restore-snapshots "$url"
+          bash scripts/ci_timed.sh restore-snapshots uv run gridwatch restore-snapshots "$url"
 
       - name: Ingest new data
         id: ingest
-        run: uv run gridwatch ingest
+        run: bash scripts/ci_timed.sh ingest uv run gridwatch ingest
       - name: Save raw data
         if: always() && steps.ingest.outcome != 'skipped'
         uses: actions/cache/save@v6
@@ -73,14 +73,14 @@ jobs:
           key: gridwatch-raw-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: dbt build
-        run: uv run gridwatch transform
+        run: bash scripts/ci_timed.sh transform uv run gridwatch transform
       - name: Forecast the next 48 hours
-        run: uv run gridwatch forecast
+        run: bash scripts/ci_timed.sh forecast uv run gridwatch forecast
       - name: Backtest (Mondays, on request, or when no result is cached)
         run: |
           if [ "$RUN_BACKTEST" = "true" ] || [ "$(date -u +%u)" = "1" ] \
              || [ ! -f data/outputs/backtest_summary.json ]; then
-            uv run gridwatch backtest
+            bash scripts/ci_timed.sh backtest uv run gridwatch backtest
           else
             echo "Using the cached backtest from $(jq -r .generated_at_utc data/outputs/backtest_summary.json)"
           fi
@@ -92,10 +92,12 @@ jobs:
 
       - name: Exports, report, dbt docs and dashboard
         run: |
-          uv run gridwatch export --annual-csv site-extra/annual_grid_intensity.csv --powerbi-dir site/downloads/powerbi
-          uv run gridwatch report --out site-extra/report.md
-          uv run gridwatch docs --out site/dbt
-          uv run gridwatch site --out site --annual-csv site-extra/annual_grid_intensity.csv
+          csv=site-extra/annual_grid_intensity.csv
+          bash scripts/ci_timed.sh export \
+            uv run gridwatch export --annual-csv "$csv" --powerbi-dir site/downloads/powerbi
+          bash scripts/ci_timed.sh report uv run gridwatch report --out site-extra/report.md
+          bash scripts/ci_timed.sh docs uv run gridwatch docs --out site/dbt
+          bash scripts/ci_timed.sh site uv run gridwatch site --out site --annual-csv "$csv"
       - uses: actions/upload-artifact@v7
         with:
           name: report-and-exports
@@ -110,6 +112,24 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site
+      - name: Step timings
+        # scripts/ci_timed.sh wrote one line per step to $RUNNER_TEMP/gridwatch-timings.tsv.
+        if: always()
+        env:
+          TIMINGS_FILE: ${{ runner.temp }}/gridwatch-timings.tsv
+        run: |
+          {
+            echo "### gridwatch step timings"
+            echo
+            memory_gb="$(free -g | awk '/^Mem:/ {print $2}')"
+            echo "Runner: ${ImageOS:-unknown} ${ImageVersion:-}, $(nproc) CPUs, ${memory_gb} GB memory."
+            echo
+            echo "| Step | Seconds | Exit code |"
+            echo "| --- | ---: | ---: |"
+            if [ -f "$TIMINGS_FILE" ]; then
+              awk -F '\t' '{ printf "| %s | %s | %s |\n", $1, $2, $3 }' "$TIMINGS_FILE"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
     name: Deploy to GitHub Pages
