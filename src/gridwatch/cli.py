@@ -6,10 +6,11 @@ import argparse
 import logging
 import random
 import sys
-from collections.abc import Sequence
-from datetime import UTC, datetime
+from collections.abc import Callable, Sequence
+from datetime import UTC, date, datetime
 from pathlib import Path
 
+import duckdb
 import httpx
 
 from gridwatch.config import ConfigError, Settings
@@ -32,14 +33,54 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 log = logging.getLogger("gridwatch")
 
 
+class UsageError(ValueError):
+    """Arguments that are valid one by one but not together, or a missing prerequisite."""
+
+
 def _parse_as_of(value: str | None) -> datetime:
     if value is None:
         return datetime.now(UTC)
     try:
         parsed = datetime.fromisoformat(value)
     except ValueError as exc:
-        raise argparse.ArgumentTypeError(f"--as-of {value!r} is not an ISO 8601 time") from exc
+        raise argparse.ArgumentTypeError(f"{value!r} is not an ISO 8601 time") from exc
     return parsed.replace(tzinfo=UTC) if parsed.tzinfo is None else parsed.astimezone(UTC)
+
+
+def _iso_time(value: str) -> str:
+    """argparse type: an ISO 8601 time, kept as text."""
+    _parse_as_of(value)
+    return value
+
+
+def _iso_date(value: str) -> str:
+    """argparse type: an ISO 8601 calendar date such as 2025-09-01."""
+    try:
+        return date.fromisoformat(value).isoformat()
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a date such as 2025-09-01") from exc
+
+
+def _int_between(minimum: int, maximum: int) -> Callable[[str], int]:
+    """argparse type: a whole number in [minimum, maximum]."""
+
+    def parse(value: str) -> int:
+        try:
+            number = int(value)
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(f"{value!r} is not a whole number") from exc
+        if not minimum <= number <= maximum:
+            raise argparse.ArgumentTypeError(f"{number} is not between {minimum} and {maximum}")
+        return number
+
+    return parse
+
+
+def _require_warehouse(settings: Settings) -> None:
+    if not settings.warehouse_path.exists():
+        raise UsageError(
+            f"no warehouse at {settings.warehouse_path}; run `gridwatch transform` first"
+        )
 
 
 def _fetcher(
@@ -75,10 +116,14 @@ def _dbt_vars(args: argparse.Namespace) -> dict[str, object]:
     variables: dict[str, object] = {}
     if getattr(args, "as_of", None):
         variables["as_of"] = _parse_as_of(args.as_of).strftime("%Y-%m-%d %H:%M:%S")
-    if getattr(args, "report_start", None):
-        variables["report_start_date"] = args.report_start
-    if getattr(args, "report_end", None):
-        variables["report_end_date"] = args.report_end
+    start = getattr(args, "report_start", None)
+    end = getattr(args, "report_end", None)
+    if start and end and start > end:
+        raise UsageError(f"--report-start {start} is after --report-end {end}")
+    if start:
+        variables["report_start_date"] = start
+    if end:
+        variables["report_end_date"] = end
     return variables
 
 
@@ -141,6 +186,7 @@ def cmd_backtest(args: argparse.Namespace, settings: Settings) -> int:
 def cmd_report(args: argparse.Namespace, settings: Settings) -> int:
     from gridwatch.report import write_report
 
+    _require_warehouse(settings)
     path = write_report(settings.warehouse_path, settings.outputs_dir, Path(args.out))
     log.info("report tables written to %s", path)
     return 0
@@ -149,6 +195,7 @@ def cmd_report(args: argparse.Namespace, settings: Settings) -> int:
 def cmd_export(args: argparse.Namespace, settings: Settings) -> int:
     from gridwatch.export import export_annual_intensity, export_powerbi
 
+    _require_warehouse(settings)
     rows = export_annual_intensity(settings.warehouse_path, Path(args.annual_csv))
     log.info("%d rows written to %s", rows, args.annual_csv)
     if args.powerbi_dir:
@@ -163,6 +210,7 @@ def cmd_export(args: argparse.Namespace, settings: Settings) -> int:
 def cmd_site(args: argparse.Namespace, settings: Settings) -> int:
     from gridwatch.dashboard.build import build_site
 
+    _require_warehouse(settings)
     csv = Path(args.annual_csv) if args.annual_csv else None
     index = build_site(settings.warehouse_path, settings.outputs_dir, Path(args.out), csv)
     log.info("dashboard written to %s", index)
@@ -219,13 +267,13 @@ def cmd_run(args: argparse.Namespace, settings: Settings) -> int:
 def _add_model_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--train-days",
-        type=int,
+        type=_int_between(14, 3650),
         default=ModelConfig.train_days,
-        help="days of history each model is trained on (default: %(default)s)",
+        help="days of history each model is trained on, 14 to 3650 (default: %(default)s)",
     )
     parser.add_argument(
         "--calibration-days",
-        type=int,
+        type=_int_between(0, 365),
         default=ModelConfig.calibration_days,
         help="recent days held out to calibrate the interval; 0 turns calibration off "
         "(default: %(default)s, capped at a fifth of --train-days)",
@@ -233,8 +281,12 @@ def _add_model_args(parser: argparse.ArgumentParser) -> None:
 
 
 def _add_window_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--report-start", help="first UK local date of the report window")
-    parser.add_argument("--report-end", help="last UK local date of the report window")
+    parser.add_argument(
+        "--report-start", type=_iso_date, help="first UK local date of the report window"
+    )
+    parser.add_argument(
+        "--report-end", type=_iso_date, help="last UK local date of the report window"
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -252,7 +304,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=ALL_SOURCES,
         help="source to ingest (repeatable; default: all)",
     )
-    ingest.add_argument("--as-of", help="treat this UTC time as 'now' (ISO 8601)")
+    ingest.add_argument("--as-of", type=_iso_time, help="treat this UTC time as 'now' (ISO 8601)")
     ingest.add_argument(
         "--repair-gaps",
         action="store_true",
@@ -264,7 +316,7 @@ def build_parser() -> argparse.ArgumentParser:
     ingest.set_defaults(func=cmd_ingest)
 
     transform = sub.add_parser("transform", help="build and test the dbt project")
-    transform.add_argument("--as-of", help="UTC time used by the freshness test")
+    transform.add_argument("--as-of", type=_iso_time, help="UTC time used by the freshness test")
     _add_window_args(transform)
     transform.set_defaults(func=cmd_transform)
 
@@ -276,24 +328,25 @@ def build_parser() -> argparse.ArgumentParser:
     _add_model_args(backtest)
     backtest.add_argument(
         "--test-days",
-        type=int,
+        type=_int_between(1, 3650),
         default=BacktestConfig.test_days,
         help="daily forecast origins to test (default: %(default)s)",
     )
     backtest.add_argument(
         "--retrain-every",
-        type=int,
+        type=_int_between(1, 365),
         default=BacktestConfig.retrain_every_days,
         help="retrain the model every N origins (default: %(default)s)",
     )
     backtest.add_argument(
         "--until",
+        type=_iso_time,
         help="use only data before this UTC time, e.g. to validate settings on a period "
         "before the test year (outputs get a suffix)",
     )
     backtest.add_argument(
         "--origin-hour",
-        type=int,
+        type=_int_between(0, 23),
         default=BacktestConfig.origin_hour_utc,
         help="UTC hour at which each forecast is issued (default: %(default)s)",
     )
@@ -312,7 +365,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     export.add_argument(
         "--half-hourly-days",
-        type=int,
+        type=_int_between(1, 3650),
         default=365,
         help="days of half-hourly rows in the Power BI export",
     )
@@ -326,10 +379,10 @@ def build_parser() -> argparse.ArgumentParser:
     site.set_defaults(func=cmd_site)
 
     run = sub.add_parser("run", help="ingest, transform, forecast, backtest, export, site")
-    run.add_argument("--as-of", help="treat this UTC time as 'now' (ISO 8601)")
+    run.add_argument("--as-of", type=_iso_time, help="treat this UTC time as 'now' (ISO 8601)")
     run.add_argument("--replay", metavar="DIR", help="serve HTTP from a recorded cassette")
     run.add_argument("--skip-backtest", action="store_true")
-    run.add_argument("--test-days", type=int, default=BacktestConfig.test_days)
+    run.add_argument("--test-days", type=_int_between(1, 3650), default=BacktestConfig.test_days)
     run.add_argument(
         "--annual-csv", default=str(REPO_ROOT / "exports" / "annual_grid_intensity.csv")
     )
@@ -354,6 +407,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         code: int = args.func(args, settings)
     except (
         ConfigError,
+        UsageError,
         IngestError,
         CassetteMissError,
         TransformError,
@@ -362,6 +416,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         argparse.ArgumentTypeError,
     ) as exc:
         log.error("%s", exc)
+        return 2
+    except (ValueError, OSError, duckdb.Error) as exc:
+        # Anything else that bad input or state can cause: one line, not a traceback.
+        # --verbose adds the traceback.
+        log.error("%s: %s", type(exc).__name__, exc)
+        log.debug("details", exc_info=True)
         return 2
     return code
 

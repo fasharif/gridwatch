@@ -82,3 +82,64 @@ def test_forecast_output_is_plain_ascii(
     out = capsys.readouterr().out
     assert "2026-01-01 00:00 UTC   123.4 gCO2/kWh" in out
     out.encode("ascii")  # a cp1252 console must be able to print it
+
+
+@pytest.mark.parametrize(
+    ("argv", "message"),
+    [
+        (["forecast", "--train-days", "5"], "5 is not between 14 and 3650"),
+        (["backtest", "--test-days", "0"], "0 is not between 1 and 3650"),
+        (["backtest", "--origin-hour", "24"], "24 is not between 0 and 23"),
+        (["backtest", "--until", "yesterday"], "'yesterday' is not an ISO 8601 time"),
+        (["transform", "--report-start", "2025-13-01"], "is not a date such as 2025-09-01"),
+        (["export", "--half-hourly-days", "lots"], "'lots' is not a whole number"),
+    ],
+)
+def test_invalid_arguments_are_rejected_with_a_message(
+    argv: list[str], message: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        build_parser().parse_args(argv)
+    assert excinfo.value.code == 2
+    assert message in capsys.readouterr().err
+
+
+def test_report_window_must_not_be_reversed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setenv("GRIDWATCH_DATA_DIR", str(tmp_path))
+    argv = ["transform", "--report-start", "2026-01-01", "--report-end", "2025-12-31"]
+    assert main(argv) == 2
+    assert "--report-start 2026-01-01 is after --report-end 2025-12-31" in caplog.text
+
+
+@pytest.mark.parametrize("command", ["report", "export", "site"])
+def test_commands_that_read_the_warehouse_explain_what_to_do(
+    command: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    monkeypatch.setenv("GRIDWATCH_DATA_DIR", str(tmp_path))
+    assert main([command, *(["--out", str(tmp_path / "x")] if command != "export" else [])]) == 2
+    assert "run `gridwatch transform` first" in caplog.text
+
+
+def test_unexpected_database_error_is_one_line(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    import duckdb
+
+    import gridwatch.report
+
+    def locked(*args: object) -> Path:
+        raise duckdb.IOException("Could not set lock on file")
+
+    settings = Settings.from_env({"GRIDWATCH_DATA_DIR": str(tmp_path)})
+    settings.warehouse_path.parent.mkdir(parents=True)
+    settings.warehouse_path.touch()
+    monkeypatch.setenv("GRIDWATCH_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(gridwatch.report, "write_report", locked)
+    assert main(["report", "--out", str(tmp_path / "report.md")]) == 2
+    assert "IOException: Could not set lock on file" in caplog.text
+    assert "Traceback" not in caplog.text
