@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from collections.abc import Mapping, Sequence
@@ -112,3 +113,19 @@ def run_dbt(
     if not results and completed.returncode != 0:
         raise TransformError(f"dbt {' '.join(command)} exited with code {completed.returncode}")
     return TransformResult(success=completed.returncode == 0, results=results)
+
+
+def generate_docs(settings: Settings, out_dir: Path, project_dir: Path = PROJECT_DIR) -> Path:
+    """Build the dbt docs (models, tests, lineage, exposures) as one static HTML page."""
+    if not settings.warehouse_path.exists():
+        raise TransformError(
+            f"no warehouse at {settings.warehouse_path}; run `gridwatch transform` first"
+        )
+    result = run_dbt(settings, ("docs", "generate", "--static"), project_dir=project_dir)
+    page = settings.data_dir / "dbt-target" / "static_index.html"
+    if not result.success or not page.exists():
+        raise TransformError("dbt docs generate failed; see the dbt log above")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    target = out_dir / "index.html"
+    shutil.copyfile(page, target)
+    return target

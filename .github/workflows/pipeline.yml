@@ -90,10 +90,11 @@ jobs:
           path: data/outputs
           key: gridwatch-outputs-${{ github.run_id }}-${{ github.run_attempt }}
 
-      - name: Exports, report and dashboard
+      - name: Exports, report, dbt docs and dashboard
         run: |
           uv run gridwatch export --annual-csv site-extra/annual_grid_intensity.csv --powerbi-dir site/downloads/powerbi
           uv run gridwatch report --out site-extra/report.md
+          uv run gridwatch docs --out site/dbt
           uv run gridwatch site --out site --annual-csv site-extra/annual_grid_intensity.csv
       - uses: actions/upload-artifact@v7
         with:

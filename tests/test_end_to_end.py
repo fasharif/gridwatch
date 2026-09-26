@@ -52,6 +52,7 @@ def pipeline(tmp_path_factory: pytest.TempPathFactory) -> Path:
             )
             == 0
         )
+        assert main(["docs", "--out", str(root / "site" / "dbt")]) == 0
         assert (
             main(["site", "--out", str(root / "site"), "--annual-csv", str(root / "annual.csv")])
             == 0
@@ -113,3 +114,7 @@ def test_site(pipeline: Path) -> None:
     snapshots = pipeline / "site" / "data" / "forecast_snapshots" / "manifest.json"
     assert json.loads(snapshots.read_text(encoding="utf-8"))["rows"] == 97
     assert 'href="data/forecast_snapshots/manifest.json"' in html
+    # dbt docs with the exposures, linked from the footer
+    docs = (pipeline / "site" / "dbt" / "index.html").read_text(encoding="utf-8")
+    assert "exposure.gridwatch.gridwatch_dashboard" in docs
+    assert 'href="dbt/index.html"' in html

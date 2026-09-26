@@ -122,6 +122,7 @@ def render(data: DashboardData, out_dir: Path, annual_csv: Path | None = None) -
         has_csv=annual_csv is not None and annual_csv.exists(),
         has_powerbi=(out_dir / "downloads" / "powerbi" / "manifest.json").exists(),
         has_snapshots=(out_dir / SNAPSHOT_DIR / "manifest.json").exists(),
+        has_dbt_docs=(out_dir / "dbt" / "index.html").exists(),
         csv_name=annual_csv.name if annual_csv is not None else "",
     )
     assets = out_dir / "assets"

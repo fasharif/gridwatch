@@ -25,6 +25,7 @@ def test_parser_knows_every_command() -> None:
         "report",
         "export",
         "site",
+        "docs",
         "run",
     ):
         args = parser.parse_args([command])
@@ -167,7 +168,7 @@ def test_run_passes_model_settings_to_forecast_and_backtest(
 
         return handler
 
-    for name in ("ingest", "transform", "forecast", "backtest", "export", "site"):
+    for name in ("ingest", "transform", "forecast", "backtest", "export", "docs", "site"):
         monkeypatch.setattr(cli, f"cmd_{name}", record(name))
     monkeypatch.setenv("GRIDWATCH_DATA_DIR", str(tmp_path))
     assert main(["run", "--train-days", "60", "--calibration-days", "0"]) == 0

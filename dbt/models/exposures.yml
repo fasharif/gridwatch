@@ -1,0 +1,77 @@
+version: 2
+
+# What reads the warehouse, so the lineage graph in the dbt docs shows where each model ends
+# up. The docs are published with the dashboard (gridwatch docs --out site/dbt).
+exposures:
+  - name: gridwatch_dashboard
+    label: gridwatch dashboard
+    type: dashboard
+    maturity: medium
+    url: https://fasharif.github.io/gridwatch/
+    description: >
+      Static dashboard built by `gridwatch site` and deployed to GitHub Pages by the daily
+      workflow. The address goes live once the repository is published and Pages is
+      enabled.
+    depends_on:
+      - ref('dim_date')
+      - ref('fct_api_forecast_snapshots')
+      - ref('fct_national_intensity')
+      - ref('rpt_api_forecast_accuracy')
+      - ref('rpt_batch_job_savings')
+      - ref('rpt_batch_job_start_slots')
+      - ref('rpt_country_intensity_comparison')
+      - ref('rpt_country_intensity_trend')
+      - ref('rpt_gb_monthly_intensity')
+      - ref('rpt_gb_regional_intensity')
+      - ref('rpt_gb_seasonal_profile')
+      - ref('rpt_gb_weekly_profile')
+      - ref('rpt_report_window')
+    owner:
+      name: Farah Sharif
+
+  - name: annual_grid_intensity_csv
+    label: Annual grid intensity CSV
+    type: application
+    maturity: high
+    description: >
+      exports/annual_grid_intensity.csv, written by `gridwatch export`: annual lifecycle
+      intensity for the UAE, the other GCC countries, the UK and the EU, with source and
+      licence on every row, for other projects' carbon estimates.
+    depends_on:
+      - ref('rpt_annual_grid_intensity_export')
+    owner:
+      name: Farah Sharif
+
+  - name: powerbi_star_schema
+    label: Power BI star schema (report not built)
+    type: analysis
+    maturity: low
+    description: >
+      Star-schema CSV files and DAX measures in powerbi/, written by `gridwatch export
+      --powerbi-dir`. The Power BI report itself has not been built; powerbi/README.md is
+      the build guide.
+    depends_on:
+      - ref('dim_country')
+      - ref('dim_date')
+      - ref('dim_fuel')
+      - ref('dim_region')
+      - ref('dim_time_of_day')
+      - ref('fct_country_intensity_annual')
+      - ref('fct_generation_mix')
+      - ref('fct_national_intensity')
+      - ref('fct_regional_intensity')
+    owner:
+      name: Farah Sharif
+
+  - name: intensity_forecast
+    label: 48-hour intensity forecast and backtest
+    type: ml
+    maturity: medium
+    description: >
+      scikit-learn gradient-boosting forecast of GB national intensity 48 hours ahead
+      (`gridwatch forecast`) and its rolling-origin backtest (`gridwatch backtest`); method
+      in docs/forecast.md.
+    depends_on:
+      - ref('fct_national_intensity')
+    owner:
+      name: Farah Sharif

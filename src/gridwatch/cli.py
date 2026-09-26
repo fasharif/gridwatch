@@ -27,7 +27,7 @@ from gridwatch.ingest.pipeline import (
     run_ingest,
 )
 from gridwatch.ingest.snapshot_mirror import SnapshotMirrorError
-from gridwatch.transform import TransformError, run_dbt
+from gridwatch.transform import TransformError, generate_docs, run_dbt
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -222,6 +222,12 @@ def cmd_site(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def cmd_docs(args: argparse.Namespace, settings: Settings) -> int:
+    page = generate_docs(settings, Path(args.out))
+    log.info("dbt docs written to %s", page)
+    return 0
+
+
 def cmd_restore_snapshots(args: argparse.Namespace, settings: Settings) -> int:
     from gridwatch.ingest.snapshot_mirror import restore_snapshots
 
@@ -269,6 +275,7 @@ def cmd_run(args: argparse.Namespace, settings: Settings) -> int:
                 annual_csv=args.annual_csv, powerbi_dir=args.powerbi_dir, half_hourly_days=365
             ),
         ),
+        ("docs", argparse.Namespace(out=str(Path(args.site_dir) / "dbt"))),
         ("site", argparse.Namespace(out=args.site_dir, annual_csv=args.annual_csv)),
     ]
     handlers = {
@@ -277,6 +284,7 @@ def cmd_run(args: argparse.Namespace, settings: Settings) -> int:
         "forecast": cmd_forecast,
         "backtest": cmd_backtest,
         "export": cmd_export,
+        "docs": cmd_docs,
         "site": cmd_site,
     }
     for name, namespace in steps:
@@ -399,6 +407,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     site.set_defaults(func=cmd_site)
 
+    docs = sub.add_parser(
+        "docs", help="build the dbt docs (lineage, models, tests) as one static page"
+    )
+    docs.add_argument("--out", default="site/dbt", help="folder for index.html")
+    docs.set_defaults(func=cmd_docs)
+
     restore = sub.add_parser(
         "restore-snapshots",
         help="merge the API forecast snapshots published with the dashboard into raw data",
@@ -408,7 +422,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     restore.set_defaults(func=cmd_restore_snapshots)
 
-    run = sub.add_parser("run", help="ingest, transform, forecast, backtest, export, site")
+    run = sub.add_parser(
+        "run", help="ingest, transform, forecast, backtest, export, docs and site in turn"
+    )
     run.add_argument("--as-of", type=_iso_time, help="treat this UTC time as 'now' (ISO 8601)")
     run.add_argument("--replay", metavar="DIR", help="serve HTTP from a recorded cassette")
     run.add_argument("--skip-backtest", action="store_true")
