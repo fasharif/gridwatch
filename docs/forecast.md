@@ -36,24 +36,30 @@ falling series.
 
 Training uses one origin every 6 hours over the previous 730 days. The length was chosen on
 a validation period before the test year: 84 daily forecasts issued from 1 July to
-22 September 2025, using only data before 24 September 2025.
+22 September 2025, using only data before 24 September 2025. The runs are in the validation
+table of [generated/report.md](generated/report.md#validation-runs):
 
-| Training window | 24-48 h MAE | 0-24 h MAE |
-| --- | ---: | ---: |
-| 365 days | 36.7 | 29.6 |
-| 730 days (default) | 33.7 | 27.2 |
-| 1,460 days | 34.2 | 26.9 |
+| Training window | Calibration | 24-48 h MAE | 0-24 h MAE | 10-90% coverage |
+| --- | --- | ---: | ---: | ---: |
+| 365 days | 56 days | 36.7 | 29.6 | 79.0% |
+| 730 days (default) | 56 days | 33.7 | 27.2 | 82.1% |
+| 730 days | off | 33.7 | 27.2 | 71.4% |
+| 1,460 days | 56 days | 34.2 | 26.9 | 80.0% |
 
-Reproduce with `uv run gridwatch backtest --until 2025-09-24 --test-days 84 --train-days 730`
-(change `--train-days`); outputs get an `_until_20250924` suffix so the main backtest is kept.
+Reproduce each row with `uv run gridwatch backtest --until 2025-09-24 --test-days 84
+--train-days 730` (change `--train-days`, or add `--calibration-days 0`), then
+`uv run gridwatch report`. Each run writes files named after its cutoff and settings, for
+example `backtest_summary_until_20250924_train730_cal56.json`, so no run overwrites another
+and the main backtest is kept.
 
 **Interval.** Two quantile models (10th and 90th percentile) give a range. Raw quantile
 models were too narrow: on the validation period the uncalibrated range covered 71.4% of
-actuals instead of 80% (`--calibration-days 0`). gridwatch therefore uses conformalised
-quantile regression (Romano, Patterson and Candès, 2019): the quantile models are trained
-without the last 56 days of origins, and the range is widened until 80% of those held-out
-targets fall inside it, separately for the first and second forecast day. With calibration
-the validation coverage was 82.1%, and on the test year 79.5%.
+actuals instead of 80%. gridwatch therefore uses conformalised quantile regression (Romano,
+Patterson and Candès, 2019): the quantile models are trained without the last 56 days of
+origins, and the range is widened until 80% of those held-out targets fall inside it,
+separately for the first and second forecast day. With calibration the validation coverage
+was 82.1%, and on the test year 79.5%. Calibration does not change the point forecast, which
+is why the two 730-day rows have the same MAE.
 
 ## Why scikit-learn
 
@@ -82,6 +88,14 @@ All methods are scored on the same half-hours (those where every method has a va
 horizon band (0-24 h, 24-48 h, 0-48 h), with MAE, RMSE, MAPE (skipping zero actuals) and
 bias. The backtest also reports interval coverage, MAE by target month and the share of days
 on which the model beat each baseline, so the months where it loses are visible.
+
+**Is the difference real?** `gridwatch report` runs a Diebold-Mariano test of equal accuracy
+between the model and each naive baseline, per horizon band. The loss is each forecast day's
+MAE, so there is one value per origin and the targets of consecutive origins do not overlap
+within a band. Errors on neighbouring days are still correlated (weather comes in spells), so
+the variance is a Newey-West estimate with 7 lags, and the p-value is two-sided from the
+normal distribution, which is adequate for a year of daily values. The test is in
+`src/gridwatch/stats.py`, with unit tests against hand-computed values.
 
 ## Limits
 
