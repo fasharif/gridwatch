@@ -243,7 +243,7 @@ def cmd_restore_snapshots(args: argparse.Namespace, settings: Settings) -> int:
 
 
 def cmd_run(args: argparse.Namespace, settings: Settings) -> int:
-    """The daily pipeline: ingest, transform, forecast, backtest, export and site."""
+    """The daily pipeline: ingest, transform, forecast, backtest, export, docs and site."""
     steps: list[tuple[str, argparse.Namespace]] = [
         (
             "ingest",
