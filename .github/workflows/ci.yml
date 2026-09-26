@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           python-version: "3.12"
           enable-cache: true
@@ -29,6 +29,8 @@ jobs:
       - run: uv run mypy
       - name: Lint workflow files
         run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
+      - name: Check that every action reference exists
+        run: uv run python scripts/check_action_refs.py
 
   test:
     name: Tests (pytest, no network)
@@ -36,7 +38,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           python-version: "3.12"
           enable-cache: true
@@ -57,7 +59,7 @@ jobs:
       GRIDWATCH_DATA_DIR: ci-data
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           python-version: "3.12"
           enable-cache: true
