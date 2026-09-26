@@ -5,11 +5,13 @@ from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
+import httpx
 import pytest
 
 from gridwatch.cli import build_parser, main
 from gridwatch.config import Settings
 from gridwatch.forecast.model import ModelConfig
+from gridwatch.ingest.http import HttpFetcher
 from gridwatch.transform import TransformError, check_inputs
 
 
@@ -27,6 +29,8 @@ def test_parser_knows_every_command() -> None:
     ):
         args = parser.parse_args([command])
         assert args.command == command
+    args = parser.parse_args(["restore-snapshots", "https://example.test/snapshots/"])
+    assert args.url == "https://example.test/snapshots/"
 
 
 def test_ingest_rejects_unknown_source() -> None:
@@ -172,3 +176,23 @@ def test_run_passes_model_settings_to_forecast_and_backtest(
         assert isinstance(config, ModelConfig)
         assert config.train_days == 60
         assert config.calibration_days == 0
+
+
+def test_restore_snapshots_command(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    caplog: pytest.LogCaptureFixture,
+    fetcher_factory: Callable[..., HttpFetcher],
+) -> None:
+    from gridwatch import cli
+
+    monkeypatch.setenv("GRIDWATCH_DATA_DIR", str(tmp_path))
+    status = {"code": 404}
+    transport = httpx.MockTransport(lambda request: httpx.Response(status["code"]))
+    monkeypatch.setattr(cli, "_fetcher", lambda *args, **kwargs: fetcher_factory(transport))
+    assert main(["restore-snapshots", "https://example.test/data/forecast_snapshots/"]) == 0
+    assert capsys.readouterr().out.startswith("no-mirror: 0 file(s)")
+    status["code"] = 403
+    assert main(["restore-snapshots", "https://example.test/data/forecast_snapshots/"]) == 2
+    assert "could not read the snapshot manifest" in caplog.text

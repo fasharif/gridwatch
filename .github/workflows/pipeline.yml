@@ -2,7 +2,9 @@ name: Daily pipeline
 
 # Fetches new data, rebuilds the warehouse, refreshes the forecast and publishes the
 # dashboard to GitHub Pages. Raw data and model outputs live in the Actions cache between
-# runs (see docs/decisions.md); if the cache has been evicted the run backfills history.
+# runs; if the cache has been evicted the run backfills history from the API. The API's
+# forecast snapshots cannot be fetched again, so they are also published with the site and
+# restored from it at the start of each run (docs/decisions.md, record 12).
 
 on:
   schedule:
@@ -50,6 +52,16 @@ jobs:
           key: gridwatch-outputs-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: gridwatch-outputs-
 
+      - name: Restore forecast snapshots from the published site
+        # 404 before the first deploy is expected; any other failure stops the run, so a
+        # site with fewer snapshots than the live one is never deployed.
+        env:
+          SNAPSHOT_MIRROR_URL: ${{ vars.SNAPSHOT_MIRROR_URL }}
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          url="${SNAPSHOT_MIRROR_URL:-https://${owner}.github.io/${GITHUB_REPOSITORY#*/}/data/forecast_snapshots/}"
+          uv run gridwatch restore-snapshots "$url"
+
       - name: Ingest new data
         id: ingest
         run: uv run gridwatch ingest
@@ -88,6 +100,12 @@ jobs:
           name: report-and-exports
           path: site-extra/
           retention-days: 30
+      - name: Keep a second copy of the forecast snapshots
+        uses: actions/upload-artifact@v7
+        with:
+          name: forecast-snapshots
+          path: site/data/forecast_snapshots/
+          retention-days: 90
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site

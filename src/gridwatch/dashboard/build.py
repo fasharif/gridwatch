@@ -18,6 +18,7 @@ from plotly.offline import get_plotlyjs
 
 from gridwatch.dashboard.data import DashboardData, collect
 from gridwatch.dashboard.figures import all_charts
+from gridwatch.ingest.snapshot_mirror import publish_snapshots
 
 
 def _clean(value: Any) -> Any:
@@ -101,6 +102,9 @@ def kpi_tiles(data: DashboardData) -> list[dict[str, str]]:
     return tiles
 
 
+SNAPSHOT_DIR = Path("data") / "forecast_snapshots"
+
+
 def render(data: DashboardData, out_dir: Path, annual_csv: Path | None = None) -> Path:
     # Always escape: select_autoescape(["html"]) would not match "index.html.j2". The chart
     # JSON is escaped for its <script> element separately and marked safe in the template.
@@ -117,6 +121,7 @@ def render(data: DashboardData, out_dir: Path, annual_csv: Path | None = None) -
         charts_json=_json_for_script(charts),
         has_csv=annual_csv is not None and annual_csv.exists(),
         has_powerbi=(out_dir / "downloads" / "powerbi" / "manifest.json").exists(),
+        has_snapshots=(out_dir / SNAPSHOT_DIR / "manifest.json").exists(),
         csv_name=annual_csv.name if annual_csv is not None else "",
     )
     assets = out_dir / "assets"
@@ -136,6 +141,13 @@ def render(data: DashboardData, out_dir: Path, annual_csv: Path | None = None) -
 
 
 def build_site(
-    warehouse: Path, outputs_dir: Path, out_dir: Path, annual_csv: Path | None = None
+    warehouse: Path,
+    outputs_dir: Path,
+    out_dir: Path,
+    annual_csv: Path | None = None,
+    raw_dir: Path | None = None,
 ) -> Path:
+    """Render the page; with ``raw_dir`` also publish the API forecast snapshots."""
+    if raw_dir is not None:
+        publish_snapshots(raw_dir, out_dir / SNAPSHOT_DIR)
     return render(collect(warehouse, outputs_dir), out_dir, annual_csv)

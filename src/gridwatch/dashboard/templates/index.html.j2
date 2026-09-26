@@ -88,10 +88,15 @@
       <div class="grid">{{ card(charts.backtest, wide=true) }}</div>
     </section>
 
-    {% if has_powerbi %}
+    {% if has_powerbi or has_snapshots %}
     <section aria-labelledby="h-downloads">
       <h2 id="h-downloads">Downloads</h2>
+      {% if has_powerbi %}
       <p class="section-intro">Star-schema CSV files for Power BI or any BI tool, rebuilt with this page: <a href="downloads/powerbi/manifest.json">manifest.json</a> lists the tables. See the build guide in the repository's powerbi folder.</p>
+      {% endif %}
+      {% if has_snapshots %}
+      <p class="section-intro">The API's 48-hour forecast as issued on each daily run, one Parquet file per month: <a href="data/forecast_snapshots/manifest.json">manifest.json</a> lists the files. The API does not keep these, so this archive is the only record.</p>
+      {% endif %}
     </section>
     {% endif %}
 

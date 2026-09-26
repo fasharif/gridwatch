@@ -109,3 +109,7 @@ def test_site(pipeline: Path) -> None:
     html = (pipeline / "site" / "index.html").read_text(encoding="utf-8")
     assert "How clean is the electricity" in html
     assert (pipeline / "site" / "data" / "annual.csv").exists()
+    # the API forecast snapshots are published with the page, as their durable copy
+    snapshots = pipeline / "site" / "data" / "forecast_snapshots" / "manifest.json"
+    assert json.loads(snapshots.read_text(encoding="utf-8"))["rows"] == 97
+    assert 'href="data/forecast_snapshots/manifest.json"' in html

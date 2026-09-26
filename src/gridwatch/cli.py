@@ -26,6 +26,7 @@ from gridwatch.ingest.pipeline import (
     ensure_empty_datasets,
     run_ingest,
 )
+from gridwatch.ingest.snapshot_mirror import SnapshotMirrorError
 from gridwatch.transform import TransformError, run_dbt
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -214,8 +215,22 @@ def cmd_site(args: argparse.Namespace, settings: Settings) -> int:
 
     _require_warehouse(settings)
     csv = Path(args.annual_csv) if args.annual_csv else None
-    index = build_site(settings.warehouse_path, settings.outputs_dir, Path(args.out), csv)
+    index = build_site(
+        settings.warehouse_path, settings.outputs_dir, Path(args.out), csv, settings.raw_dir
+    )
     log.info("dashboard written to %s", index)
+    return 0
+
+
+def cmd_restore_snapshots(args: argparse.Namespace, settings: Settings) -> int:
+    from gridwatch.ingest.snapshot_mirror import restore_snapshots
+
+    fetcher = _fetcher(settings, None, replaying=False)
+    result = restore_snapshots(fetcher, args.url, settings.raw_dir)
+    print(
+        f"{result.status}: {result.files} file(s), {result.stats.inserted} new row(s), "
+        f"{result.stats.unchanged} unchanged"
+    )
     return 0
 
 
@@ -384,6 +399,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     site.set_defaults(func=cmd_site)
 
+    restore = sub.add_parser(
+        "restore-snapshots",
+        help="merge the API forecast snapshots published with the dashboard into raw data",
+    )
+    restore.add_argument(
+        "url", help="folder that holds manifest.json, e.g. https://<site>/data/forecast_snapshots/"
+    )
+    restore.set_defaults(func=cmd_restore_snapshots)
+
     run = sub.add_parser("run", help="ingest, transform, forecast, backtest, export, site")
     run.add_argument("--as-of", type=_iso_time, help="treat this UTC time as 'now' (ISO 8601)")
     run.add_argument("--replay", metavar="DIR", help="serve HTTP from a recorded cassette")
@@ -416,6 +440,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         UsageError,
         IngestError,
         CassetteMissError,
+        SnapshotMirrorError,
         TransformError,
         SeriesError,
         NotEnoughHistoryError,
