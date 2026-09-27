@@ -150,7 +150,7 @@ the dashboard.
 **Context.** The daily workflow needs yesterday's raw data to run incrementally, and bulky
 data must not be committed to git. Most raw data can be fetched again from the API, but the
 48-hour forecast *as issued* cannot: the API keeps only its latest forecast for each
-half-hour, so the snapshots stored on each run are the only record of them.
+half-hour, so the snapshots stored on each run are gridwatch's only record of them.
 **Decision.** Store `data/raw` and `data/outputs` in the GitHub Actions cache. Each run
 restores the most recent cache, ingests, and saves a new cache entry straight after ingestion
 (so a later failure does not lose the fetch) and again after the model steps. The forecast
