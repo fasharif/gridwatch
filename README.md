@@ -124,31 +124,38 @@ start of each run (see
 | Transformation | dbt-core with dbt-duckdb | Versioned SQL, lineage, and tests next to the models |
 | Data frames | polars | Typed, fast, and strict about schemas at the ingestion boundary |
 | Forecasting | scikit-learn `HistGradientBoostingRegressor` | Handles missing values and quantile loss with no system libraries ([reasoning](docs/forecast.md#why-scikit-learn)) |
-| Statistics | numpy: moving-block bootstrap, Diebold-Mariano with Newey-West variance | Honest uncertainty with no extra dependency ([decision 19](docs/decisions.md#19-state-the-uncertainty-of-headline-results)) |
+| Statistics | numpy: moving-block bootstrap, Diebold-Mariano with Newey-West variance | Intervals and tests without an extra dependency ([decision 19](docs/decisions.md#19-state-the-uncertainty-of-headline-results)) |
 | Dashboard | Jinja2 and Plotly, static HTML | One language end to end, no Node build, no secrets ([decision 11](docs/decisions.md#11-dashboard-generated-html-with-plotly)) |
 | CI and scheduling | GitHub Actions, Pages, Dependabot | Free for public repositories |
 
 ## Quick start
 
-Needs [uv](https://docs.astral.sh/uv/) (it installs Python 3.12 if needed) and network access.
+Needs [uv](https://docs.astral.sh/uv/) (it installs Python 3.12 if needed) and a POSIX shell
+such as bash, or Git Bash on Windows. This runs the whole pipeline offline on the recorded
+API responses in `tests/fixtures/`:
 
 ```bash
 git clone https://github.com/fasharif/gridwatch.git && cd gridwatch
 uv sync --locked
-uv run gridwatch run --skip-backtest    # drop --skip-backtest for the year-long backtest
-```
-
-Then open `site/index.html` in a browser. The first run backfills nine years: about 335 HTTP
-requests, which the client spaces at least a second apart (a count from the request planner,
-not a measured time). Later runs fetch only new data. The backtest retrains the model 14
-times and is the slowest step, so leave it out for a first look.
-
-To try it offline on the recorded fixture instead (a POSIX shell such as bash, or Git Bash on
-Windows, because of `set -a` and `.`):
-
-```bash
 set -a; . tests/fixtures/fixture.env; set +a; export GRIDWATCH_DATA_DIR=data/demo
 uv run gridwatch run --replay tests/fixtures/cassette --as-of "$FIXTURE_AS_OF" --skip-backtest --train-days 30
+```
+
+Then open `site/index.html` in a browser. The fixture holds two months of data, so several
+charts are sparse and the regional one is empty.
+
+For live data, run `uv run gridwatch run --skip-backtest` in a new shell (without the fixture
+settings; drop `--skip-backtest` for the year-long backtest). The first run backfills nine
+years: about 335 HTTP requests (a count from the request planner). The client waits at least
+a second between requests, and the regional and generation-mix responses are large, so the
+first run takes longer than 335 seconds. Later runs fetch only new data. The backtest
+retrains the model 14 times and is the slowest step. For a quicker first look at live data,
+start later; the dashboard then has less history, and the regional chart covers only the
+months since June 2026:
+
+```bash
+GRIDWATCH_NATIONAL_START=2025-01-01 GRIDWATCH_GENERATION_START=2025-01-01 \
+  GRIDWATCH_REGIONAL_START=2026-06-01 uv run gridwatch run --skip-backtest
 ```
 
 Each step can also run on its own: `gridwatch ingest`, `transform`, `forecast`, `backtest`,
