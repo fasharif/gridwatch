@@ -15,6 +15,10 @@ on:
         description: Run the 365-day backtest even if today is not Monday
         type: boolean
         default: false
+      repair_gaps:
+        description: Re-request every hole in the cached raw history (see the runbook in docs/data.md)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -31,6 +35,7 @@ jobs:
     env:
       GRIDWATCH_DATA_DIR: data
       RUN_BACKTEST: ${{ inputs.backtest }}
+      REPAIR_GAPS: ${{ inputs.repair_gaps }}
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
@@ -64,7 +69,14 @@ jobs:
 
       - name: Ingest new data
         id: ingest
-        run: bash scripts/ci_timed.sh ingest uv run gridwatch ingest
+        # A normal run re-requests only the last GRIDWATCH_REFETCH_DAYS. The raw history comes
+        # back from the cache, so an older hole stays until a manual run with repair_gaps.
+        run: |
+          args=()
+          if [ "$REPAIR_GAPS" = "true" ]; then
+            args+=(--repair-gaps)
+          fi
+          bash scripts/ci_timed.sh ingest uv run gridwatch ingest "${args[@]}"
       - name: Save raw data
         if: always() && steps.ingest.outcome != 'skipped'
         uses: actions/cache/save@v6
@@ -135,6 +147,7 @@ jobs:
     name: Deploy to GitHub Pages
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       pages: write
       id-token: write

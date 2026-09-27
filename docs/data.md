@@ -126,11 +126,17 @@ recorded. That is deliberate: an unrecorded gap could just as well be an ingesti
 
 1. Read the failing test's rows in the workflow log (or run `uv run gridwatch transform`
    locally): `gap_after_utc`, `resumes_at_utc` and `missing_periods` for the dataset.
-2. Re-request the hole: `uv run gridwatch ingest --repair-gaps`, then `uv run gridwatch
-   transform`. If the test passes, it was a transient fetch problem and nothing else is
-   needed (the daily workflow can be run by hand to publish).
+2. Re-request the hole in the workflow's own history: *Actions > Daily pipeline > Run
+   workflow* with *repair_gaps* ticked. That run passes `--repair-gaps` to `gridwatch
+   ingest`, which re-requests every hole in the cached raw data (for regional data, region
+   by region), saves the result to the cache and, if the gap test then passes, deploys. A
+   repair on your own machine does not help here: the workflow restores its raw data from
+   the Actions cache, not from your copy. If the cache itself is broken, delete the
+   `gridwatch-raw-*` entries under *Actions > Caches*; the next run then backfills the whole
+   history from the API (about 335 requests).
 3. If the gap is still there, check the API directly for that range to confirm it is
-   upstream, then add a row to `dbt/seeds/known_source_gaps.csv` with the dataset, the two
+   upstream (locally, `uv run gridwatch ingest --repair-gaps` shows whether the API serves
+   it), then add a row to `dbt/seeds/known_source_gaps.csv` with the dataset, the two
    timestamps, the number of missing half-hours and a note with the date of the check.
 4. Commit the seed. The next scheduled run (or a manual one) builds and deploys again.
 
