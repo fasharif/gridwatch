@@ -51,12 +51,15 @@ select
     100.0 * (latest.intensity_gco2e_kwh - baseline_2015.intensity_2015)
         / baseline_2015.intensity_2015 as change_since_2015_pct,
     latest.generation_twh,
+    mix.fossil_share_pct,
     mix.gas_share_pct,
     mix.coal_share_pct,
     mix.other_fossil_share_pct,
     mix.nuclear_share_pct,
     mix.solar_share_pct,
     mix.wind_share_pct,
+    mix.hydro_share_pct,
+    mix.bioenergy_share_pct,
     mix.clean_share_pct
 from latest
 cross join reference

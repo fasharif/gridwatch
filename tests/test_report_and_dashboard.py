@@ -363,3 +363,22 @@ def test_diebold_mariano_table_from_predictions(tmp_path: Path) -> None:
     assert (table["days"] == 30).all()
     assert (table["mean_difference"] < 0).all()
     assert (table["p_value"] == "<0.001").all()
+
+
+def test_excluded_days_section_names_each_day_and_reason() -> None:
+    from gridwatch.report import _excluded_days_section
+
+    assert _excluded_days_section(pl.DataFrame(schema={"day": pl.String})) == [
+        "Every day of the window is in the rule comparison.",
+        "",
+    ]
+    excluded = pl.DataFrame(
+        {
+            "day": ["2026-08-06", "2026-08-23"],
+            "half_hour_utc": ["2026-08-06 11:00", "2026-08-23 20:30"],
+            "reason": ["implausible actual removed", "implausible forecast removed"],
+        }
+    )
+    text = "\n".join(_excluded_days_section(excluded))
+    assert "left out of the rule comparison (2)" in text
+    assert "| 2026-08-23 | 2026-08-23 20:30 | implausible forecast removed |" in text

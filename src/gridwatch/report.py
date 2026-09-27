@@ -231,6 +231,45 @@ def build_report(warehouse: Path, outputs_dir: Path, raw_dir: Path | None = None
             order by year_month
             """,
         )
+        # Days of the window missing from the rule comparison, and the upstream values
+        # removed from the job windows that start on those days (up to 04:00 the next day).
+        excluded = _q(
+            con,
+            """
+            with window_days as (
+                select cast(unnest(generate_series(start_date, end_date, interval 1 day))
+                            as date) as day
+                from reporting.rpt_report_window
+            ),
+
+            excluded as (
+                select day
+                from window_days
+                where day not in (
+                    select job_start_date
+                    from reporting.rpt_batch_job_daily_strategies
+                    where profile_guided is not null and forecast_guided is not null
+                )
+            )
+
+            select
+                strftime(excluded.day, '%Y-%m-%d') as day,
+                strftime(national.period_start_utc, '%Y-%m-%d %H:%M') as half_hour_utc,
+                case
+                    when national.is_missing_from_source then 'not served by the API'
+                    when national.is_actual_implausible then 'implausible actual removed'
+                    when national.is_forecast_implausible then 'implausible forecast removed'
+                    when national.is_actual_missing then 'no actual value'
+                end as reason
+            from excluded
+            left join marts.fct_national_intensity as national
+                on national.period_start_local >= excluded.day
+                and national.period_start_local < excluded.day + interval 28 hour
+                and (national.is_missing_from_source or national.is_actual_missing
+                     or national.is_forecast_implausible)
+            order by 1, 2
+            """,
+        )
         profile_overall = _q(
             con,
             """
@@ -248,8 +287,9 @@ def build_report(warehouse: Path, outputs_dir: Path, raw_dir: Path | None = None
             """
             select country_name, comparison_year, intensity_gco2e_kwh, ratio_to_uk,
                    ratio_to_eu, intensity_2015_gco2e_kwh, change_since_2015_pct,
-                   gas_share_pct, other_fossil_share_pct, nuclear_share_pct,
-                   solar_share_pct + wind_share_pct as wind_solar_share_pct
+                   fossil_share_pct, gas_share_pct, coal_share_pct, other_fossil_share_pct,
+                   nuclear_share_pct, solar_share_pct + wind_share_pct as wind_solar_share_pct,
+                   hydro_share_pct, bioenergy_share_pct
             from reporting.rpt_country_intensity_comparison
             order by intensity_gco2e_kwh
             """,
@@ -280,7 +320,10 @@ def build_report(warehouse: Path, outputs_dir: Path, raw_dir: Path | None = None
             con,
             """
             select calendar_year, mean_actual_gco2_kwh, mean_low_carbon_pct, mean_wind_pct,
-                   mean_gas_pct, mean_coal_pct, is_complete_year
+                   mean_gas_pct, mean_coal_pct,
+                   100.0 * periods_with_actual
+                       / (48 * (case when calendar_year % 4 = 0 then 366 else 365 end))
+                       as actual_coverage_pct
             from reporting.rpt_gb_annual_intensity
             order by calendar_year
             """,
@@ -441,6 +484,7 @@ def build_report(warehouse: Path, outputs_dir: Path, raw_dir: Path | None = None
         "",
         markdown_table(worst_week, ["Day", "Start", "Mean gCO2/kWh", "Jobs"]),
         "",
+        *_excluded_days_section(excluded),
         f"One run per day under each scheduling rule; the kg column assumes a "
         f"{job['kw']} kW load for {job['h']} hours:",
         "",
@@ -490,10 +534,14 @@ def build_report(warehouse: Path, outputs_dir: Path, raw_dir: Path | None = None
                 "x EU",
                 "2015",
                 "Change since 2015 (%)",
+                "All fossil %",
                 "Gas %",
+                "Coal %",
                 "Oil and other fossil %",
                 "Nuclear %",
                 "Wind and solar %",
+                "Hydro %",
+                "Bioenergy %",
             ],
             decimals=0,
             column_decimals={
@@ -524,7 +572,15 @@ def build_report(warehouse: Path, outputs_dir: Path, raw_dir: Path | None = None
         "",
         markdown_table(
             annual_gb,
-            ["Year", "Mean gCO2/kWh", "Low-carbon %", "Wind %", "Gas %", "Coal %", "Complete year"],
+            [
+                "Year",
+                "Mean gCO2/kWh",
+                "Low-carbon %",
+                "Wind %",
+                "Gas %",
+                "Coal %",
+                "Half-hours with an actual (%)",
+            ],
         ),
         "",
         markdown_table(
@@ -589,6 +645,19 @@ def build_report(warehouse: Path, outputs_dir: Path, raw_dir: Path | None = None
     parts += _backtest_section(backtest, outputs_dir / BACKTEST_PREDICTIONS_FILE)
     parts += _validation_section(outputs_dir)
     return "\n".join(parts).rstrip() + "\n"
+
+
+def _excluded_days_section(excluded: pl.DataFrame) -> list[str]:
+    if excluded.height == 0:
+        return ["Every day of the window is in the rule comparison.", ""]
+    return [
+        f"Days of the window left out of the rule comparison ({excluded['day'].n_unique()}): a "
+        "day counts only when every rule, the forecast rule included, can be scored, and a "
+        "value was removed upstream in one of these days' job windows:",
+        "",
+        markdown_table(excluded, ["Day (UK)", "Half-hour removed (UTC)", "Reason"]),
+        "",
+    ]
 
 
 def _saving_intervals(daily: pl.DataFrame, by_strategy: Mapping[str, Any]) -> pl.DataFrame:
