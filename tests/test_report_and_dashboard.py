@@ -320,12 +320,21 @@ def test_validation_section_lists_every_stored_run(tmp_path: Path) -> None:
 
     assert "_No validation run stored._" in _validation_section(tmp_path)
     for train, cal, cover in ((730, 56, 82.07), (730, 0, 71.42), (365, 56, 79.0)):
+        summary = _summary("2025-09-24T00:00Z", train, cal, 33.72, cover)
+        if cal == 56:  # runs from before the lead-time breakdown have no first-hour figures
+            summary["mae_by_lead"] = [
+                {"lead_band": "0-1 h", "n": 166, "mae_model": 3.57, "mae_persistence": 3.27},
+                {"lead_band": "1-4 h", "n": 498, "mae_model": 8.83, "mae_persistence": 8.58},
+            ]
         (tmp_path / f"backtest_summary_until_20250924_train{train}_cal{cal}.json").write_text(
-            json.dumps(_summary("2025-09-24T00:00Z", train, cal, 33.72, cover))
+            json.dumps(summary)
         )
     table = "\n".join(_validation_section(tmp_path))
-    assert "| 2025-09-24 | 2025-07-01 to 2025-09-22 | 84 | 730 | 0 | 27.7 | 33.7 | 71.4 |" in table
-    assert "| 84 | 730 | 56 | 27.7 | 33.7 | 82.1 |" in table
+    assert (
+        "| 2025-09-24 | 2025-07-01 to 2025-09-22 | 84 | 730 | 0 | n/a | n/a | 27.7 | 33.7 | 71.4 |"
+        in table
+    )
+    assert "| 84 | 730 | 56 | 3.6 | 3.3 | 27.7 | 33.7 | 82.1 |" in table
     assert table.index("| 365 |") < table.index("| 730 | 0 |") < table.index("| 730 | 56 |")
 
 

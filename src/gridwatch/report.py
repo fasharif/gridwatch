@@ -898,6 +898,8 @@ def _validation_section(outputs_dir: Path) -> list[str]:
             if m["method"] == "model"
         }
         coverage = {c["horizon_band"]: c["coverage_pct"] for c in run["interval_coverage"]}
+        # Runs made before the lead-time breakdown existed have no first-hour figures.
+        first_hour = next((b for b in run.get("mae_by_lead", []) if b["lead_band"] == "0-1 h"), {})
         rows.append(
             [
                 str(run.get("until_utc") or "")[:10],
@@ -905,6 +907,8 @@ def _validation_section(outputs_dir: Path) -> list[str]:
                 run["origins"],
                 run["config"]["model"]["train_days"],
                 run["config"]["model"]["calibration_days"],
+                first_hour.get("mae_model"),
+                first_hour.get("mae_persistence"),
                 mae.get(("0-24 h", "model")),
                 mae.get(("24-48 h", "model")),
                 coverage.get("0-48 h"),
@@ -918,6 +922,8 @@ def _validation_section(outputs_dir: Path) -> list[str]:
             ("origins", pl.Int64),
             ("train_days", pl.Int64),
             ("calibration_days", pl.Int64),
+            ("mae_0_1", pl.Float64),
+            ("persistence_0_1", pl.Float64),
             ("mae_0_24", pl.Float64),
             ("mae_24_48", pl.Float64),
             ("coverage", pl.Float64),
@@ -934,6 +940,8 @@ def _validation_section(outputs_dir: Path) -> list[str]:
                 "Forecasts",
                 "Training days",
                 "Calibration days",
+                "Model MAE 0-1 h",
+                "Persistence MAE 0-1 h",
                 "Model MAE 0-24 h",
                 "Model MAE 24-48 h",
                 "10-90% coverage, 0-48 h (%)",
