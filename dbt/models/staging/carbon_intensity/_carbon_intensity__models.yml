@@ -156,6 +156,18 @@ models:
         data_tests:
           - not_null
           - aligned_to_half_hour
+      - name: forecast_gco2_kwh
+        description: >
+          The API's forecast as it stood at the issue time. Implausible values are nulled
+          and flagged in fct_api_forecast_snapshots; this warn-level test counts them.
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: "{{ var('plausible_min_gco2_kwh') }}"
+                max_value: "{{ var('plausible_max_gco2_kwh') }}"
+              config:
+                warn_if: ">0"
+                error_if: ">100"
       - name: lead_minutes
         data_tests:
           - accepted_range:

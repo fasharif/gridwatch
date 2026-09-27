@@ -170,12 +170,23 @@ models:
                 field: date_key
 
   - name: fct_api_forecast_snapshots
-    description: The API's 48-hour forecast per issue time and target half-hour, with the actual.
+    description: >
+      The API's 48-hour forecast per issue time and target half-hour, with the actual.
+      Forecasts outside the plausible range are null and flagged, as in the national fact.
     data_tests:
       - unique_combination_of_columns:
           arguments:
             combination_of_columns: [issued_at_utc, period_start_utc]
     columns:
+      - name: forecast_gco2_kwh
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: "{{ var('plausible_min_gco2_kwh') }}"
+                max_value: "{{ var('plausible_max_gco2_kwh') }}"
+      - name: is_forecast_implausible
+        data_tests:
+          - not_null
       - name: date_key
         data_tests:
           - relationships:
