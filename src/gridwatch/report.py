@@ -24,7 +24,7 @@ from typing import Any
 import duckdb
 import polars as pl
 
-from gridwatch.forecast.backtest import HORIZON_BANDS
+from gridwatch.forecast.backtest import HORIZON_BANDS, METHODS
 from gridwatch.forecast.service import (
     BACKTEST_PREDICTIONS_FILE,
     BACKTEST_SUMMARY_FILE,
@@ -35,11 +35,12 @@ from gridwatch.stats import diebold_mariano, saving_interval
 
 METHOD_LABELS = {
     "model": "gridwatch model (gradient boosting)",
+    "persistence": "Persistence: last known value",
     "naive_yesterday": "Naive: same half-hour, last known day",
     "naive_last_week": "Naive: same half-hour, one week earlier",
     "api_forecast": "API retained forecast (short lead)",
 }
-METHODS = tuple(METHOD_LABELS)
+NAIVE_BASELINES = ("persistence", "naive_yesterday", "naive_last_week")
 DM_LAGS = 7
 BOOTSTRAP_BLOCK_DAYS = 7
 BOOTSTRAP_RESAMPLES = 2000
@@ -698,38 +699,60 @@ def _forecast_headline(summary: Mapping[str, Any] | None) -> list[tuple[str, str
         return []
     mae = {m["method"]: m["mae"] for m in summary["metrics"] if m["horizon_band"] == "24-48 h"}
     wins = {w["compared_with"]: w for w in summary["model_win_rates_24_48h"]}
-    return [
+    rows = [
         (
-            "Model 24-48 h MAE below the last-known-day baseline (%)",
-            f"{100.0 * (1.0 - mae['model'] / mae['naive_yesterday']):.0f}",
-        ),
-        (
-            "Model 24-48 h MAE below the last-week baseline (%)",
-            f"{100.0 * (1.0 - mae['model'] / mae['naive_last_week']):.0f}",
-        ),
+            f"Model 24-48 h MAE below the {_short(baseline)} baseline (%)",
+            f"{100.0 * (1.0 - mae['model'] / mae[baseline]):.0f}",
+        )
+        for baseline in NAIVE_BASELINES
+        if baseline in mae
+    ]
+    rows += [
         (
             "Days the model lost to the last-known-day baseline, 24-48 h (%)",
             f"{100.0 - wins['naive_yesterday']['model_better_pct']:.1f}",
-        ),
+        )
     ]
+    monthly = [
+        m["coverage_pct"]
+        for m in summary.get("monthly_mae_24_48h", [])
+        if m.get("coverage_pct") is not None
+    ]
+    if monthly:
+        rows.append(
+            (
+                "Lowest and highest monthly 10-90% coverage, 24-48 h (%)",
+                f"{min(monthly):.1f} to {max(monthly):.1f}",
+            )
+        )
+    return rows
+
+
+def _short(method: str) -> str:
+    return {
+        "persistence": "persistence",
+        "naive_yesterday": "last-known-day",
+        "naive_last_week": "last-week",
+    }[method]
 
 
 def _diebold_mariano_table(predictions_path: Path) -> pl.DataFrame | None:
     if not predictions_path.exists():
         return None
     predictions = pl.read_parquet(predictions_path)
-    complete = predictions.drop_nulls(subset=["actual", *METHODS]).filter(
-        pl.all_horizontal([pl.col(c).is_not_nan() for c in ["actual", *METHODS]])
+    methods = [m for m in METHODS if m in predictions.columns]
+    complete = predictions.drop_nulls(subset=["actual", *methods]).filter(
+        pl.all_horizontal([pl.col(c).is_not_nan() for c in ["actual", *methods]])
     )
     rows = []
     for band, first, last in HORIZON_BANDS[:2]:
         daily = (
             complete.filter(pl.col("horizon").is_between(first, last))
             .group_by("origin_utc")
-            .agg([(pl.col(m) - pl.col("actual")).abs().mean().alias(m) for m in METHODS])
+            .agg([(pl.col(m) - pl.col("actual")).abs().mean().alias(m) for m in methods])
             .sort("origin_utc")
         )
-        for baseline in ("naive_yesterday", "naive_last_week"):
+        for baseline in (b for b in NAIVE_BASELINES if b in methods):
             try:
                 test = diebold_mariano(
                     daily["model"].to_numpy(), daily[baseline].to_numpy(), lags=DM_LAGS
@@ -764,6 +787,7 @@ def _backtest_section(summary: Mapping[str, Any] | None, predictions_path: Path)
     if summary is None:
         return ["## Forecast backtest", "", "_Not run yet: `gridwatch backtest`._", ""]
     metrics = pl.DataFrame(summary["metrics"]).with_columns(pl.col("method").replace(METHOD_LABELS))
+    monthly = pl.DataFrame(summary["monthly_mae_24_48h"])
     config = summary["config"]
     lines = [
         "## Forecast backtest",
@@ -786,6 +810,7 @@ def _backtest_section(summary: Mapping[str, Any] | None, predictions_path: Path)
             ["Horizon", "Pairs", "Coverage %", "Mean width"],
         ),
         "",
+        *_lead_time_section(summary),
         "Share of forecast days (24-48 h ahead) on which the model had the lower MAE:",
         "",
         markdown_table(
@@ -795,11 +820,11 @@ def _backtest_section(summary: Mapping[str, Any] | None, predictions_path: Path)
             ["Compared with", "Days", "Model better", "Model better %"],
         ),
         "",
-        "MAE by target month, 24-48 h ahead:",
+        "MAE by target month, 24-48 h ahead, and the model's 10-90% coverage in that month:",
         "",
         markdown_table(
-            pl.DataFrame(summary["monthly_mae_24_48h"]),
-            ["Month", "Pairs", "Model", "Naive last known day", "Naive last week", "API"],
+            monthly,
+            ["Month", "Pairs", *[_SHORT_LABELS[c] for c in monthly.columns[2:]]],
         ),
         "",
     ]
@@ -826,6 +851,32 @@ def _backtest_section(summary: Mapping[str, Any] | None, predictions_path: Path)
             "",
         ]
     return lines
+
+
+_SHORT_LABELS = {
+    "mae_model": "Model",
+    "mae_persistence": "Persistence",
+    "mae_naive_yesterday": "Naive last known day",
+    "mae_naive_last_week": "Naive last week",
+    "mae_api_forecast": "API",
+    "coverage_pct": "Model 10-90% coverage %",
+}
+
+
+def _lead_time_section(summary: Mapping[str, Any]) -> list[str]:
+    rows = summary.get("mae_by_lead")
+    if not rows:
+        return []
+    frame = pl.DataFrame(rows)
+    return [
+        "MAE by lead time, with the model's 10-90% coverage (all methods on the same half-hours):",
+        "",
+        markdown_table(
+            frame,
+            ["Lead time", "Pairs", *[_SHORT_LABELS[c] for c in frame.columns[2:]]],
+        ),
+        "",
+    ]
 
 
 def _validation_section(outputs_dir: Path) -> list[str]:

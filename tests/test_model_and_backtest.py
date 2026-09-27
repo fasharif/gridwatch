@@ -10,20 +10,29 @@ import polars as pl
 import pytest
 
 from gridwatch.forecast.backtest import (
+    LEAD_BANDS,
     BacktestConfig,
     interval_coverage,
+    lead_time_breakdown,
     origin_indices,
     run_backtest,
     summarise,
     win_rates,
 )
+from gridwatch.forecast.baselines import persistence
 from gridwatch.forecast.calendar import calendar_for
 from gridwatch.forecast.data import NationalSeries, SeriesError
 from gridwatch.forecast.features import MAX_HORIZON
 from gridwatch.forecast.metrics import score
-from gridwatch.forecast.model import IntensityForecaster, ModelConfig, NotEnoughHistoryError
+from gridwatch.forecast.model import (
+    IntensityForecaster,
+    ModelConfig,
+    NotEnoughHistoryError,
+    horizon_weights,
+    lead_band,
+)
 from gridwatch.forecast.service import forecast_next, validation_suffix, validation_summaries
-from tests.helpers import synthetic_series
+from tests.helpers import autocorrelated_series, synthetic_series
 
 SMALL = ModelConfig(train_days=40, origin_step=6, max_iter=60, calibration_days=8)
 
@@ -68,6 +77,52 @@ def test_model_learns_the_daily_cycle() -> None:
     # learned the cycle must be far better than a flat line at the recent mean.
     assert np.mean(model_errors) < 0.5 * np.mean(flat_errors)
     assert np.mean(model_errors) < 15
+
+
+def test_first_hours_are_as_good_as_persistence() -> None:
+    """The first half-hours must not be worse than repeating the last value.
+
+    An earlier model predicted the change from the 24-hour mean, with equal weight for every
+    horizon, and was several times worse than persistence in the first hour of the real
+    backtest. Anchoring at the last value and weighting horizons fixes that. On this series
+    the earlier design was about twice as bad as persistence; the current one is not worse.
+    """
+    series = autocorrelated_series()
+    calendar = calendar_for(series.start, len(series) + MAX_HORIZON)
+    cutoff = 58 * 48 - 1
+    model = IntensityForecaster(SMALL).fit(series.actual, calendar, cutoff)
+    model_errors, persistence_errors = [], []
+    for step in range(0, 5 * 48, 7):  # origins at many times of day
+        origin = cutoff + step
+        forecast = model.predict(series.actual, calendar, origin)
+        actual = series.actual[origin + forecast.horizons[:2]]
+        model_errors.append(np.abs(forecast.point[:2] - actual).mean())
+        naive = persistence(series.actual, origin, forecast.horizons[:2])
+        persistence_errors.append(np.abs(naive - actual).mean())
+    assert np.mean(model_errors) < 1.15 * np.mean(persistence_errors)
+
+
+def test_horizon_weights_give_every_horizon_the_same_total_weight() -> None:
+    rng = np.random.default_rng(1)
+    horizons = np.repeat(np.array([1.0, 48.0]), 500)
+    target = np.concatenate([rng.normal(0, 2, 500), rng.normal(0, 40, 500)])
+    weights = horizon_weights(horizons, target)
+    assert weights.mean() == pytest.approx(1.0)
+    short = (weights[:500] * (target[:500] - target[:500].mean()) ** 2).sum()
+    long = (weights[500:] * (target[500:] - target[500:].mean()) ** 2).sum()
+    assert short == pytest.approx(long, rel=1e-9)
+    assert (horizon_weights(np.ones(3), np.zeros(3)) == 1.0).all()
+
+
+def test_lead_bands_are_six_hours_wide() -> None:
+    np.testing.assert_array_equal(lead_band([1, 12, 13, 24, 96]), [0, 0, 1, 1, 7])
+
+
+def test_interval_is_calibrated_per_lead_band() -> None:
+    series = synthetic_series(days=70)
+    calendar = calendar_for(series.start, len(series) + MAX_HORIZON)
+    model = IntensityForecaster(SMALL).fit(series.actual, calendar, 58 * 48 - 1)
+    assert sorted(model._widening) == list(range(8))
 
 
 def test_fit_ignores_values_after_cutoff() -> None:
@@ -120,16 +175,22 @@ def test_backtest_on_synthetic_series() -> None:
     assert result.predictions.height == 6 * MAX_HORIZON
     assert set(result.metrics["method"]) == {
         "model",
+        "persistence",
         "naive_yesterday",
         "naive_last_week",
         "api_forecast",
     }
-    assert result.metrics.height == 12
+    assert result.metrics.height == 15
     assert result.first_origin.hour == 0
     # every forecast is issued at midnight UTC, after its last known half-hour
     assert (result.predictions["target_utc"] >= result.predictions["origin_utc"]).all()
     assert result.coverage.height == 3
-    assert result.wins.height == 3
+    assert result.wins.height == 4
+    assert result.lead_times["lead_band"].to_list() == [band for band, _, _ in LEAD_BANDS]
+    assert "coverage_pct" in result.monthly.columns
+    # persistence repeats the value at the origin for all 96 horizons
+    first = result.predictions.head(MAX_HORIZON)
+    assert first["persistence"].n_unique() == 1
 
 
 def test_origins_leave_room_for_targets() -> None:
@@ -159,7 +220,12 @@ def test_summaries_use_a_common_sample() -> None:
     assert row["n"].item() == 1  # the second pair lacks a naive value
     coverage = interval_coverage(predictions)
     assert coverage.filter(pl.col("horizon_band") == "0-24 h")["coverage_pct"].item() == 100.0
+    # an older predictions file without persistence still summarises
     assert win_rates(predictions).height == 3
+    leads = lead_time_breakdown(predictions)
+    assert leads["lead_band"].to_list() == ["0-1 h"]
+    assert leads["mae_model"].item() == 10.0
+    assert "mae_persistence" not in leads.columns
 
 
 def test_forecast_next_starts_after_last_actual() -> None:

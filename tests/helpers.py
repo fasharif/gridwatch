@@ -48,3 +48,17 @@ def synthetic_series(
     actual = 150 + daily + weekly + drift + rng.normal(0, 8, n)
     api = actual + rng.normal(0, 5, n)
     return NationalSeries(start=start, actual=actual, api_forecast=api)
+
+
+def autocorrelated_series(days: int = 70, seed: int = 3) -> NationalSeries:
+    """A daily cycle plus a slowly wandering AR(1) level, so the next half-hour is close to
+    the last one, as on the real grid. Persistence is hard to beat here in the first hour."""
+    n = days * 48
+    rng = np.random.default_rng(seed)
+    level = np.zeros(n)
+    for i in range(1, n):
+        level[i] = 0.97 * level[i - 1] + rng.normal(0, 6)
+    t = np.arange(n)
+    actual = 150 + 40 * np.sin(2 * np.pi * t / 48) + level + rng.normal(0, 1.5, n)
+    api = actual + rng.normal(0, 5, n)
+    return NationalSeries(start=datetime(2025, 1, 1, tzinfo=UTC), actual=actual, api_forecast=api)

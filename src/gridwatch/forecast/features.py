@@ -22,7 +22,7 @@ PERIODS_PER_DAY = 48
 PERIODS_PER_WEEK = 7 * PERIODS_PER_DAY
 MAX_HORIZON = 2 * PERIODS_PER_DAY  # 48 hours
 
-FEATURE_NAMES: tuple[str, ...] = (
+BASE_FEATURES: tuple[str, ...] = (
     "horizon",
     "target_slot",
     "target_day_of_week",
@@ -41,6 +41,22 @@ FEATURE_NAMES: tuple[str, ...] = (
     "same_slot_profile_7d",
     "same_slot_week_before",
     "same_slot_two_weeks_before",
+)
+# Level features restated relative to the last known value. The model predicts the change
+# from the last value, and a tree cannot subtract two inputs, so it is given the differences.
+RELATIVE_TO_LAST: tuple[str, ...] = (
+    "previous_value",
+    "mean_24h",
+    "mean_7d",
+    "min_24h",
+    "max_24h",
+    "same_slot_latest_day",
+    "same_slot_profile_7d",
+    "same_slot_week_before",
+    "same_slot_two_weeks_before",
+)
+FEATURE_NAMES: tuple[str, ...] = BASE_FEATURES + tuple(
+    f"{name}_minus_last" for name in RELATIVE_TO_LAST
 )
 
 FloatArray = npt.NDArray[np.float64]
@@ -151,6 +167,8 @@ def build_features(
         _take(values, t - PERIODS_PER_WEEK),
         _take(values, t - 2 * PERIODS_PER_WEEK),
     ]
+    last = columns[BASE_FEATURES.index("last_value")]
+    columns += [columns[BASE_FEATURES.index(name)] - last for name in RELATIVE_TO_LAST]
     matrix = np.column_stack(columns)
     if matrix.shape[1] != len(FEATURE_NAMES):
         raise AssertionError("feature list and FEATURE_NAMES are out of step")

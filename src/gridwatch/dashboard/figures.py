@@ -23,6 +23,7 @@ DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
 SEASONS = ["Winter", "Spring", "Summer", "Autumn"]
 METHOD_LABELS = {
     "model": "gridwatch model",
+    "persistence": "Persistence (last known value)",
     "naive_yesterday": "Same half-hour, last known day",
     "naive_last_week": "Same half-hour, last week",
     "api_forecast": "API retained forecast (short lead)",
@@ -463,10 +464,14 @@ def backtest(data: DashboardData) -> Chart:
     x = [r["hours_ahead"] for r in data.backtest_by_horizon]
     roles = {
         "model": "series-2",
+        "persistence": "series-4",
         "naive_yesterday": "series-1",
         "naive_last_week": "muted",
         "api_forecast": "series-3",
     }
+    present = data.backtest_by_horizon[0].keys()
+    # Persistence is dotted, so it stays distinct from the model's line without relying on
+    # colour alone.
     traces = [
         _line(
             x,
@@ -474,8 +479,10 @@ def backtest(data: DashboardData) -> Chart:
             METHOD_LABELS[m],
             roles[m],
             hovertemplate="%{y:.1f}",
+            line={"width": 2, "dash": "dot" if m == "persistence" else "solid"},
         )
-        for m in ("naive_last_week", "naive_yesterday", "model", "api_forecast")
+        for m in ("naive_last_week", "naive_yesterday", "persistence", "model", "api_forecast")
+        if m in present
     ]
     rows = [
         [
@@ -498,8 +505,9 @@ def backtest(data: DashboardData) -> Chart:
         {"data": traces, "layout": _layout("MAE, gCO2/kWh", "Hours ahead")},
         ["Horizon", "Method", "Pairs", "MAE", "RMSE", "MAPE %", "Bias"],
         rows,
-        note="The API's retained forecast was issued shortly before each half-hour, not a "
-        "day ahead, so it is not a like-for-like competitor at 24-48 hours.",
+        note="Persistence repeats the last known value: hard to beat for the first hours, "
+        "poor a day ahead. The API's retained forecast was issued shortly before each "
+        "half-hour, not a day ahead, so it is not a like-for-like competitor at 24-48 hours.",
     )
 
 

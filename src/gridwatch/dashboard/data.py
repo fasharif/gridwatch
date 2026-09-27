@@ -11,6 +11,7 @@ from typing import Any
 import duckdb
 import polars as pl
 
+from gridwatch.forecast.backtest import methods_in
 from gridwatch.forecast.service import (
     BACKTEST_PREDICTIONS_FILE,
     BACKTEST_SUMMARY_FILE,
@@ -70,7 +71,7 @@ def _backtest(outputs_dir: Path) -> tuple[Rows, Rows, dict[str, Any]]:
     if not predictions_path.exists() or not summary_path.exists():
         return [], [], {}
     predictions = pl.read_parquet(predictions_path)
-    methods = ["model", "naive_yesterday", "naive_last_week", "api_forecast"]
+    methods = methods_in(predictions)
     complete = predictions.drop_nulls(subset=["actual", *methods]).filter(
         pl.all_horizontal([pl.col(c).is_not_nan() for c in ["actual", *methods]])
     )

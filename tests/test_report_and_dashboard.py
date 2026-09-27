@@ -159,7 +159,8 @@ def sample_data() -> DashboardData:
             {
                 "horizon": 1,
                 "hours_ahead": 0.5,
-                "model": 20.0,
+                "model": 4.0,
+                "persistence": 3.5,
                 "naive_yesterday": 30.0,
                 "naive_last_week": 40.0,
                 "api_forecast": 9.0,
@@ -208,6 +209,14 @@ def test_every_chart_has_a_spec_and_table() -> None:
         assert all(len(row) == len(chart.columns) for row in chart.rows), chart.chart_id
         for trace in chart.spec["data"]:
             assert "role" in trace["meta"]
+
+
+def test_backtest_chart_shows_persistence_dotted() -> None:
+    chart = next(c for c in all_charts(sample_data(), 4) if c.chart_id == "backtest")
+    assert chart.spec is not None
+    traces = {t["name"]: t for t in chart.spec["data"]}
+    assert traces["Persistence (last known value)"]["line"]["dash"] == "dot"
+    assert traces["gridwatch model"]["line"]["dash"] == "solid"
 
 
 @pytest.mark.parametrize(
@@ -323,10 +332,21 @@ def test_validation_section_lists_every_stored_run(tmp_path: Path) -> None:
 def test_forecast_headline_is_derived_from_the_summary() -> None:
     from gridwatch.report import _forecast_headline
 
-    figures = dict(_forecast_headline(_summary(None, 730, 56, 42.5, 79.5)))
+    summary = _summary(None, 730, 56, 42.5, 79.5)
+    figures = dict(_forecast_headline(summary))
     assert figures["Model 24-48 h MAE below the last-known-day baseline (%)"] == "10"
     assert figures["Model 24-48 h MAE below the last-week baseline (%)"] == "20"
     assert figures["Days the model lost to the last-known-day baseline, 24-48 h (%)"] == "42.2"
+    # no persistence in this (older) summary, and no monthly coverage: rows left out
+    assert not any("persistence" in key for key in figures)
+    assert not any("monthly" in key for key in figures)
+    summary["metrics"].append(  # type: ignore[attr-defined]
+        {"horizon_band": "24-48 h", "method": "persistence", "mae": 85.0}
+    )
+    summary["monthly_mae_24_48h"] = [{"coverage_pct": 61.07}, {"coverage_pct": 90.52}]
+    figures = dict(_forecast_headline(summary))
+    assert figures["Model 24-48 h MAE below the persistence baseline (%)"] == "50"
+    assert figures["Lowest and highest monthly 10-90% coverage, 24-48 h (%)"] == "61.1 to 90.5"
     assert _forecast_headline(None) == []
 
 
@@ -350,6 +370,7 @@ def test_diebold_mariano_table_from_predictions(tmp_path: Path) -> None:
                     "horizon": horizon,
                     "actual": actual,
                     "model": actual + rng.normal(0, 10),
+                    "persistence": actual + rng.normal(0, 30),
                     "naive_yesterday": actual + rng.normal(0, 30),
                     "naive_last_week": actual + rng.normal(0, 40),
                     "api_forecast": actual + rng.normal(0, 5),
@@ -359,7 +380,7 @@ def test_diebold_mariano_table_from_predictions(tmp_path: Path) -> None:
     pl.DataFrame(rows).write_parquet(path)
     table = _diebold_mariano_table(path)
     assert table is not None
-    assert table.height == 4
+    assert table.height == 6  # two bands, three naive baselines
     assert (table["days"] == 30).all()
     assert (table["mean_difference"] < 0).all()
     assert (table["p_value"] == "<0.001").all()

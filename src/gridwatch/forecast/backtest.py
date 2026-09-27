@@ -15,7 +15,11 @@ from datetime import datetime, timedelta
 import numpy as np
 import polars as pl
 
-from gridwatch.forecast.baselines import naive_same_slot_last_week, naive_same_slot_yesterday
+from gridwatch.forecast.baselines import (
+    naive_same_slot_last_week,
+    naive_same_slot_yesterday,
+    persistence,
+)
 from gridwatch.forecast.calendar import calendar_for
 from gridwatch.forecast.data import NationalSeries
 from gridwatch.forecast.features import MAX_HORIZON, PERIODS_PER_DAY, TrailingStats
@@ -24,8 +28,17 @@ from gridwatch.forecast.model import IntensityForecaster, ModelConfig
 
 log = logging.getLogger(__name__)
 
-METHODS = ("model", "naive_yesterday", "naive_last_week", "api_forecast")
+METHODS = ("model", "persistence", "naive_yesterday", "naive_last_week", "api_forecast")
 HORIZON_BANDS = (("0-24 h", 1, 48), ("24-48 h", 49, 96), ("0-48 h", 1, 96))
+# Finer bands of lead time, to show where each method wins (persistence in the first hours).
+LEAD_BANDS = (
+    ("0-1 h", 1, 2),
+    ("1-4 h", 3, 8),
+    ("4-12 h", 9, 24),
+    ("12-24 h", 25, 48),
+    ("24-36 h", 49, 72),
+    ("36-48 h", 73, 96),
+)
 
 
 @dataclass(frozen=True)
@@ -51,6 +64,7 @@ class BacktestResult:
     coverage: pl.DataFrame
     monthly: pl.DataFrame
     wins: pl.DataFrame
+    lead_times: pl.DataFrame
     folds: int
     first_origin: datetime
     last_origin: datetime
@@ -102,6 +116,7 @@ def run_backtest(
                         "model": forecast.point,
                         "model_p10": forecast.lower,
                         "model_p90": forecast.upper,
+                        "persistence": persistence(values, origin, horizons),
                         "naive_yesterday": naive_same_slot_yesterday(values, origin, horizons),
                         "naive_last_week": naive_same_slot_last_week(values, origin, horizons),
                         "api_forecast": series.api_forecast[targets],
@@ -119,15 +134,21 @@ def run_backtest(
         coverage=interval_coverage(predictions),
         monthly=monthly_breakdown(predictions),
         wins=win_rates(predictions),
+        lead_times=lead_time_breakdown(predictions),
         folds=len(blocks),
         first_origin=series.timestamp(origins[0] + 1),
         last_origin=series.timestamp(origins[-1] + 1),
     )
 
 
+def methods_in(predictions: pl.DataFrame) -> list[str]:
+    """The methods present, in METHODS order (outputs from older versions may lack some)."""
+    return [m for m in METHODS if m in predictions.columns]
+
+
 def complete_pairs(predictions: pl.DataFrame) -> pl.DataFrame:
     """Rows where the actual and every method have a value, so all methods share a sample."""
-    columns = ["actual", *METHODS]
+    columns = ["actual", *methods_in(predictions)]
     return predictions.drop_nulls(subset=columns).filter(
         pl.all_horizontal([pl.col(c).is_not_nan() for c in columns])
     )
@@ -140,10 +161,14 @@ def summarise(predictions: pl.DataFrame) -> pl.DataFrame:
     for band, lo, hi in HORIZON_BANDS:
         part = complete.filter(pl.col("horizon").is_between(lo, hi))
         actual = part["actual"].to_numpy()
-        for method in METHODS:
+        for method in methods_in(predictions):
             metrics = score(part[method].to_numpy(), actual)
             rows.append({"horizon_band": band, "method": method, **metrics.as_dict()})
     return pl.DataFrame(rows)
+
+
+def _inside() -> pl.Expr:
+    return (pl.col("actual") >= pl.col("model_p10")) & (pl.col("actual") <= pl.col("model_p90"))
 
 
 def interval_coverage(predictions: pl.DataFrame) -> pl.DataFrame:
@@ -152,9 +177,7 @@ def interval_coverage(predictions: pl.DataFrame) -> pl.DataFrame:
     rows: list[dict[str, object]] = []
     for band, lo, hi in HORIZON_BANDS:
         part = complete.filter(pl.col("horizon").is_between(lo, hi))
-        inside = part.filter(
-            (pl.col("actual") >= pl.col("model_p10")) & (pl.col("actual") <= pl.col("model_p90"))
-        ).height
+        inside = part.filter(_inside()).height
         rows.append(
             {
                 "horizon_band": band,
@@ -170,15 +193,40 @@ def interval_coverage(predictions: pl.DataFrame) -> pl.DataFrame:
     return pl.DataFrame(rows)
 
 
+def lead_time_breakdown(predictions: pl.DataFrame) -> pl.DataFrame:
+    """MAE per method and interval coverage for each band of lead time."""
+    complete = complete_pairs(predictions)
+    methods = methods_in(predictions)
+    rows: list[dict[str, object]] = []
+    for band, lo, hi in LEAD_BANDS:
+        part = complete.filter(pl.col("horizon").is_between(lo, hi))
+        if part.height == 0:
+            continue
+        actual = part["actual"].to_numpy()
+        row: dict[str, object] = {"lead_band": band, "n": part.height}
+        for method in methods:
+            row[f"mae_{method}"] = float(np.mean(np.abs(part[method].to_numpy() - actual)))
+        row["coverage_pct"] = 100.0 * part.filter(_inside()).height / part.height
+        rows.append(row)
+    return pl.DataFrame(rows)
+
+
 def monthly_breakdown(predictions: pl.DataFrame) -> pl.DataFrame:
-    """MAE per calendar month of the target for the 24-48 h band, to show where each wins."""
+    """MAE per calendar month of the target for the 24-48 h band, to show where each wins.
+
+    The last column is the model's 10-90% interval coverage in that month.
+    """
     part = complete_pairs(predictions).filter(pl.col("horizon") > PERIODS_PER_DAY)
     return (
         part.with_columns(pl.col("target_utc").dt.strftime("%Y-%m").alias("month"))
         .group_by("month")
         .agg(
             [pl.len().alias("n")]
-            + [(pl.col(m) - pl.col("actual")).abs().mean().alias(f"mae_{m}") for m in METHODS]
+            + [
+                (pl.col(m) - pl.col("actual")).abs().mean().alias(f"mae_{m}")
+                for m in methods_in(predictions)
+            ]
+            + [(100.0 * _inside().mean()).alias("coverage_pct")]
         )
         .sort("month")
     )
@@ -186,12 +234,13 @@ def monthly_breakdown(predictions: pl.DataFrame) -> pl.DataFrame:
 
 def win_rates(predictions: pl.DataFrame) -> pl.DataFrame:
     """Share of forecast days (24-48 h band) on which the model beats each other method."""
+    methods = methods_in(predictions)
     part = complete_pairs(predictions).filter(pl.col("horizon") > PERIODS_PER_DAY)
     daily = part.group_by("origin_utc").agg(
-        [(pl.col(m) - pl.col("actual")).abs().mean().alias(m) for m in METHODS]
+        [(pl.col(m) - pl.col("actual")).abs().mean().alias(m) for m in methods]
     )
     rows = []
-    for other in METHODS[1:]:
+    for other in methods[1:]:
         wins = daily.filter(pl.col("model") < pl.col(other)).height
         rows.append(
             {

@@ -1,4 +1,4 @@
-"""Seasonal naive baselines. Both use only values known at the forecast origin."""
+"""Naive baselines: persistence and two seasonal ones. All use only values known at the origin."""
 
 from __future__ import annotations
 
@@ -17,6 +17,15 @@ def _take(values: FloatArray, index: IntArray) -> FloatArray:
     ok = (index >= 0) & (index < len(values))
     out[ok] = values[index[ok]]
     return out
+
+
+def persistence(values: FloatArray, origin: int, horizons: IntArray) -> FloatArray:
+    """The last known value, repeated for every horizon.
+
+    Hard to beat for the first hour or two, because intensity changes slowly from one
+    half-hour to the next; useless a day ahead, because it ignores the daily cycle.
+    """
+    return np.full(np.asarray(horizons).shape, values[origin], dtype=np.float64)
 
 
 def naive_same_slot_yesterday(values: FloatArray, origin: int, horizons: IntArray) -> FloatArray:

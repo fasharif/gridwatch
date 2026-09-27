@@ -93,7 +93,14 @@ def test_backtest_outputs(pipeline: Path) -> None:
     )
     assert summary["origins"] == 7
     methods = {m["method"] for m in summary["metrics"]}
-    assert methods == {"model", "naive_yesterday", "naive_last_week", "api_forecast"}
+    assert methods == {
+        "model",
+        "persistence",
+        "naive_yesterday",
+        "naive_last_week",
+        "api_forecast",
+    }
+    assert summary["mae_by_lead"][0]["lead_band"] == "0-1 h"
 
 
 def test_exports(pipeline: Path) -> None:

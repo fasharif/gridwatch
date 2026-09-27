@@ -72,6 +72,7 @@ def summary_json(result: BacktestResult, config: BacktestConfig) -> dict[str, ob
         },
         "metrics": result.metrics.to_dicts(),
         "interval_coverage": result.coverage.to_dicts(),
+        "mae_by_lead": result.lead_times.to_dicts(),
         "monthly_mae_24_48h": result.monthly.to_dicts(),
         "model_win_rates_24_48h": result.wins.to_dicts(),
     }
