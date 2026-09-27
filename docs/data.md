@@ -76,7 +76,10 @@ naive UTC. Each row carries `fetched_at_utc`.
   manifest of row counts and SHA-256 hashes under `data/forecast_snapshots/` on the
   dashboard, and `gridwatch restore-snapshots URL` merges them back into `data/raw/` with the
   same idempotent upsert. The daily workflow restores them before it ingests (see
-  [decision 12](decisions.md#12-keeping-history-between-scheduled-runs)).
+  [decision 12](decisions.md#12-keeping-history-between-scheduled-runs)). An ingest with
+  `--as-of` more than half an hour in the past skips the snapshot and logs why, because the
+  API would answer with its retained values rather than the forecast as issued; only a
+  replayed cassette and `scripts/record_fixtures.py` store one for a past time.
 
 The full history (September 2017 to September 2026, regional from 2023) takes about 27 MB of
 Parquet.
@@ -99,8 +102,9 @@ any gap that is not listed.
 of 0 (2023 and 2026). GB national intensity has stayed roughly between 20 and 500. Values
 outside 10 to 700 gCO2/kWh are set to null in `int_national_half_hours` and flagged
 (`is_actual_implausible`, `is_forecast_implausible`): 6 actuals and 22 forecasts in the
-current history. Warn-level tests in staging count them, and fail the build if more than 100
-appear.
+current history. `fct_api_forecast_snapshots` applies the same rule to the stored 48-hour
+forecasts (none so far). Warn-level tests in staging count them, and fail the build if more
+than 100 appear.
 
 **Missing actuals.** 625 national half-hours that the API serves have no actual value, 308 of them in 2019.
 They stay null; the gap-free fact table marks them with `is_actual_missing`.
