@@ -25,6 +25,9 @@ from gridwatch.ingest.storage import ParquetStore, UpsertStats, write_placeholde
 log = logging.getLogger(__name__)
 
 ALL_SOURCES = ("national", "generation", "regional", "snapshot", "ember")
+# For a past time /intensity/{t}/fw48h returns the API's retained short-lead values, not the
+# forecast as it stood at t, so a snapshot is only taken when "now" is close to the clock.
+SNAPSHOT_MAX_LAG = timedelta(minutes=30)
 
 
 def national_store(raw_dir: Path) -> ParquetStore:
@@ -226,11 +229,28 @@ def ingest_regional(
 
 
 def ingest_snapshot(
-    fetcher: HttpFetcher, settings: Settings, now: datetime, repair_gaps: bool = False
+    fetcher: HttpFetcher, settings: Settings, now: datetime, allow_past: bool = False
 ) -> DatasetReport:
-    """Store the API's 48-hour forecast as issued now, for like-for-like accuracy checks."""
+    """Store the API's 48-hour forecast as issued now, for like-for-like accuracy checks.
+
+    When ``now`` is more than half an hour behind the clock (``--as-of`` in the past) the
+    snapshot is skipped: the API would answer with its retained values for those half-hours,
+    which were issued shortly before each one, and storing them as a forecast issued at
+    ``now`` would corrupt the archive. ``allow_past`` turns the check off for replaying a
+    recorded cassette and for recording test fixtures.
+    """
     report = DatasetReport("forecast_snapshots")
     issued = ci.floor_half_hour(now)
+    lag = datetime.now(UTC) - now
+    if not allow_past and lag > SNAPSHOT_MAX_LAG:
+        log.warning(
+            "forecast_snapshots: skipped, because the as-of time %s is %s behind the clock "
+            "and the API does not return past forecasts as issued",
+            f"{now:%Y-%m-%dT%H:%MZ}",
+            str(lag).split(".", maxsplit=1)[0],
+        )
+        report.windows = [f"{issued:%Y-%m-%dT%H:%MZ}/fw48h skipped (as-of time in the past)"]
+        return report
     url = ci.snapshot_url(settings.carbon_api_base, issued)
     report.windows = [f"{issued:%Y-%m-%dT%H:%MZ}/fw48h"]
     try:
@@ -271,11 +291,14 @@ def run_ingest(
     now: datetime,
     sources: Iterable[str] = ALL_SOURCES,
     repair_gaps: bool = False,
+    allow_past_snapshot: bool = False,
 ) -> IngestReport:
     """Ingest the selected sources. Each source is independent and resumable.
 
     ``repair_gaps`` also re-requests every hole inside the stored history. Daily runs leave
     it off because the API has a few permanent gaps that would be re-requested each time.
+    ``allow_past_snapshot`` stores a forecast snapshot even for an as-of time in the past
+    (see ``ingest_snapshot``); only replays and fixture recordings should set it.
     """
     if now.tzinfo is None:
         raise ValueError("now must be timezone-aware")
@@ -288,14 +311,16 @@ def run_ingest(
         "national": ingest_national,
         "generation": ingest_generation,
         "regional": ingest_regional,
-        "snapshot": ingest_snapshot,
     }
     for source in selected:
         if source == "ember":
             report.ember = ingest_ember(fetcher, settings, now)
             log.info("ember: %s (%d rows)", report.ember.status, report.ember.rows)
             continue
-        dataset_report = runners[source](fetcher, settings, now, repair_gaps)
+        if source == "snapshot":
+            dataset_report = ingest_snapshot(fetcher, settings, now, allow_past_snapshot)
+        else:
+            dataset_report = runners[source](fetcher, settings, now, repair_gaps)
         log.info("%s: %s", source, dataset_report.as_dict())
         report.datasets.append(dataset_report)
     return report

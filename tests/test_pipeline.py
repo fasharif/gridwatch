@@ -47,7 +47,7 @@ def test_first_run_then_idempotent_rerun(
     api = FakeCarbonApi()
     fetcher = fetcher_factory(httpx.MockTransport(api))
     now = datetime(2026, 3, 20, 9, 10, tzinfo=UTC)
-    run_ingest(settings, fetcher, now, CI_SOURCES)
+    run_ingest(settings, fetcher, now, CI_SOURCES, allow_past_snapshot=True)
     expected = half_hours(datetime(2026, 3, 1, tzinfo=UTC), datetime(2026, 3, 20, 9, tzinfo=UTC))
     national = national_store(settings.raw_dir).read()
     assert national.height == expected
@@ -58,7 +58,7 @@ def test_first_run_then_idempotent_rerun(
 
     files = sorted((settings.raw_dir).rglob("*.parquet"))
     before = {p: p.read_bytes() for p in files}
-    report = run_ingest(settings, fetcher, now, CI_SOURCES)
+    report = run_ingest(settings, fetcher, now, CI_SOURCES, allow_past_snapshot=True)
     assert all(d.stats.inserted == 0 and d.stats.updated == 0 for d in report.datasets)
     assert {p: p.read_bytes() for p in files} == before
 
@@ -178,6 +178,35 @@ def test_repair_gaps_finds_a_hole_in_one_region_only(
     assert regional_mix_store(settings.raw_dir).read().height == full * 9
 
 
+def test_a_past_as_of_time_skips_the_snapshot(
+    settings_factory: Callable[..., Settings],
+    fetcher_factory: Callable[..., HttpFetcher],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """fw48h for a past time returns retained values, which must not enter the archive."""
+    settings = fake_settings(settings_factory, "2026-03-01")
+    api = FakeCarbonApi()
+    fetcher = fetcher_factory(httpx.MockTransport(api))
+    report = run_ingest(settings, fetcher, datetime(2026, 3, 20, tzinfo=UTC), ["snapshot"])
+    assert api.requests == []
+    assert report.datasets[0].requests == 0
+    assert "skipped" in report.datasets[0].windows[0]
+    assert "does not return past forecasts" in caplog.text
+    assert snapshot_store(settings.raw_dir).read().height == 0
+
+
+def test_a_current_as_of_time_takes_the_snapshot(
+    settings_factory: Callable[..., Settings], fetcher_factory: Callable[..., HttpFetcher]
+) -> None:
+    settings = fake_settings(settings_factory, "2026-03-01")
+    api = FakeCarbonApi()
+    fetcher = fetcher_factory(httpx.MockTransport(api))
+    run_ingest(settings, fetcher, datetime.now(UTC), ["snapshot"])
+    assert len(api.requests) == 1
+    assert api.requests[0].endswith("/fw48h")
+    assert snapshot_store(settings.raw_dir).read().height == 97
+
+
 def test_rejects_unknown_source_and_naive_time(
     settings_factory: Callable[..., Settings], fetcher_factory: Callable[..., HttpFetcher]
 ) -> None:
@@ -198,7 +227,7 @@ def test_replaying_the_recorded_cassette(
     settings = settings_factory(**env)
     transport = ReplayTransport(CASSETTE)
     as_of = datetime.fromisoformat(fixture_env["FIXTURE_AS_OF"]).replace(tzinfo=UTC)
-    report = run_ingest(settings, fetcher_factory(transport), as_of)
+    report = run_ingest(settings, fetcher_factory(transport), as_of, allow_past_snapshot=True)
     assert report.ember is not None
     assert report.ember.status == "downloaded"
     national = national_store(settings.raw_dir).read()

@@ -50,8 +50,15 @@ def record_carbon_intensity(env: dict[str, str]) -> None:
         transport = RecordingTransport(CASSETTE)
         client = build_client(USER_AGENT, 60.0, transport)
         fetcher = HttpFetcher(client, RateLimiter(1.0), RetryPolicy())
+        # FIXTURE_AS_OF is in the past, so the recorded "snapshot" holds the API's retained
+        # short-lead values, not a forecast as issued (see tests/fixtures/README.md). That is
+        # fine for test data; the real archive never stores a snapshot for a past time.
         report = run_ingest(
-            settings, fetcher, as_of, ["national", "generation", "regional", "snapshot"]
+            settings,
+            fetcher,
+            as_of,
+            ["national", "generation", "regional", "snapshot"],
+            allow_past_snapshot=True,
         )
         print(report.to_json())
 

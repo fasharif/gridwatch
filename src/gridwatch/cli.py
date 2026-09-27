@@ -108,7 +108,15 @@ def cmd_ingest(args: argparse.Namespace, settings: Settings) -> int:
         transport = RecordingTransport(Path(args.record))
     fetcher = _fetcher(settings, transport, replaying=bool(args.replay))
     sources = args.source or list(ALL_SOURCES)
-    report = run_ingest(settings, fetcher, now, sources, repair_gaps=args.repair_gaps)
+    # A replayed cassette holds whatever snapshot was recorded, so the clock check is off.
+    report = run_ingest(
+        settings,
+        fetcher,
+        now,
+        sources,
+        repair_gaps=args.repair_gaps,
+        allow_past_snapshot=bool(args.replay),
+    )
     ensure_empty_datasets(settings.raw_dir)
     print(report.to_json())
     log.info("ingest finished with %d HTTP request(s)", fetcher.request_count)

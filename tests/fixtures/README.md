@@ -14,6 +14,13 @@ The fixture window contains two real upstream errors that the pipeline must hand
 actual of 0 gCO2/kWh on 2026-08-06 at 11:00 UTC and a forecast of 5 gCO2/kWh on 2026-08-23
 at 20:30 UTC.
 
+The recorded 48-hour forecast snapshot (`/intensity/2026-09-20T00:00Z/fw48h`) was fetched on
+2026-09-25, after the half-hours it covers. For a past time the API returns its retained
+short-lead values, not the forecast as it stood then, so this snapshot is far more accurate
+than a real day-ahead one. It is fine as test data for the snapshot tables, but it is not a
+day-ahead record. A normal `gridwatch ingest --as-of` in the past skips the snapshot for
+this reason; only replays and `scripts/record_fixtures.py` store one.
+
 ## Licences and attribution
 
 - Carbon Intensity API data: National Energy System Operator (NESO), CC BY 4.0,
