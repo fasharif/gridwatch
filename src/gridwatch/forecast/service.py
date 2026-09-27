@@ -68,6 +68,9 @@ def summary_json(result: BacktestResult, config: BacktestConfig) -> dict[str, ob
             "test_days": config.test_days,
             "retrain_every_days": config.retrain_every_days,
             "origin_hour_utc": config.origin_hour_utc,
+            "last_origin_utc": None
+            if config.last_origin_utc is None
+            else config.last_origin_utc.strftime("%Y-%m-%dT%H:%MZ"),
             "model": asdict(config.model),
         },
         "metrics": result.metrics.to_dicts(),
@@ -112,7 +115,8 @@ def run_backtest_job(
 
     With ``until`` only data before that time is used (for choosing settings on a period
     before the test year), and the outputs get a suffix naming the cutoff and the settings,
-    so the main results and other validation runs are kept.
+    so the main results and other validation runs are kept. ``config.last_origin_utc`` pins
+    the test period of the main backtest instead, keeping the main file names.
     """
     series = load_national_series(settings.warehouse_path)
     suffix = ""

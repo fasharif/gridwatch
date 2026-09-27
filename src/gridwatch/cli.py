@@ -174,11 +174,13 @@ def cmd_forecast(args: argparse.Namespace, settings: Settings) -> int:
 
 
 def cmd_backtest(args: argparse.Namespace, settings: Settings) -> int:
+    last_origin = getattr(args, "last_origin", None)
     config = BacktestConfig(
         test_days=args.test_days,
         retrain_every_days=args.retrain_every,
         origin_hour_utc=args.origin_hour,
         model=_model_config(args),
+        last_origin_utc=_parse_as_of(last_origin) if last_origin else None,
     )
     until = _parse_as_of(args.until) if getattr(args, "until", None) else None
     summary = run_backtest_job(settings, config, until)
@@ -382,6 +384,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=_iso_time,
         help="use only data before this UTC time, e.g. to validate settings on a period "
         "before the test year (outputs get a suffix)",
+    )
+    backtest.add_argument(
+        "--last-origin",
+        type=_iso_time,
+        help="issue time (UTC) of the last test forecast, e.g. 2026-09-23, so a later run "
+        "tests the same days (default: the latest day the data allows)",
     )
     backtest.add_argument(
         "--origin-hour",

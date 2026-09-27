@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import numpy as np
 import polars as pl
@@ -47,6 +47,9 @@ class BacktestConfig:
     retrain_every_days: int = 28
     origin_hour_utc: int = 0
     model: ModelConfig = field(default_factory=ModelConfig)
+    # Issue time of the last forecast (UTC). None means the latest day the data allows; a
+    # fixed value makes a later run test the same days.
+    last_origin_utc: datetime | None = None
 
     def __post_init__(self) -> None:
         if self.test_days < 1:
@@ -70,6 +73,10 @@ class BacktestResult:
     last_origin: datetime
 
 
+def _naive_utc(value: datetime) -> datetime:
+    return value.astimezone(UTC).replace(tzinfo=None) if value.tzinfo else value
+
+
 def origin_indices(series: NationalSeries, config: BacktestConfig) -> list[int]:
     """Daily origins (index of the last known half-hour) whose 48 h of targets are observed."""
     last_target = series.last_actual_index()
@@ -80,6 +87,24 @@ def origin_indices(series: NationalSeries, config: BacktestConfig) -> list[int]:
     first_issue = first_issue.replace(hour=config.origin_hour_utc, minute=0)
     offset = int((first_issue - start) / timedelta(minutes=30)) - 1
     candidates = list(range(offset, last_origin + 1, PERIODS_PER_DAY))
+    if config.last_origin_utc is not None:
+        pinned = _naive_utc(config.last_origin_utc)
+        # The latest daily issue time at or before the pinned time.
+        wanted = pinned.replace(hour=config.origin_hour_utc, minute=0, second=0, microsecond=0)
+        if wanted > pinned:
+            wanted -= timedelta(days=1)
+        kept = [c for c in candidates if series.timestamp(c + 1) <= wanted]
+        if not kept or series.timestamp(kept[-1] + 1) != wanted:
+            latest = (
+                f"{series.timestamp(candidates[-1] + 1):%Y-%m-%d %H:%M} UTC"
+                if candidates
+                else "none"
+            )
+            raise ValueError(
+                f"no complete 48-hour test for a forecast issued at {wanted:%Y-%m-%d %H:%M} "
+                f"UTC; the latest issue time the data allows is {latest}"
+            )
+        candidates = kept
     return candidates[-config.test_days :]
 
 

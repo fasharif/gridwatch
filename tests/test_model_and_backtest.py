@@ -193,6 +193,24 @@ def test_backtest_on_synthetic_series() -> None:
     assert first["persistence"].n_unique() == 1
 
 
+def test_a_pinned_last_origin_fixes_the_test_period() -> None:
+    series = synthetic_series(days=40)
+    latest = origin_indices(series, BacktestConfig(test_days=5))
+    pinned = origin_indices(
+        series, BacktestConfig(test_days=5, last_origin_utc=datetime(2025, 2, 3, 15, 0))
+    )
+    assert series.timestamp(pinned[-1] + 1) == datetime(2025, 2, 3, 0, 0)
+    assert len(pinned) == 5
+    assert pinned[-1] < latest[-1]
+    # a date only means midnight; an aware time is converted to UTC
+    as_date = origin_indices(
+        series, BacktestConfig(test_days=5, last_origin_utc=datetime(2025, 2, 3, tzinfo=UTC))
+    )
+    assert as_date == pinned
+    with pytest.raises(ValueError, match="latest issue time the data allows"):
+        origin_indices(series, BacktestConfig(last_origin_utc=datetime(2025, 3, 1)))
+
+
 def test_origins_leave_room_for_targets() -> None:
     series = synthetic_series(days=30)
     origins = origin_indices(series, BacktestConfig(test_days=400))

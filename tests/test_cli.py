@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 from collections.abc import Callable
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -99,6 +99,7 @@ def test_forecast_output_is_plain_ascii(
         (["backtest", "--test-days", "0"], "0 is not between 1 and 3650"),
         (["backtest", "--origin-hour", "24"], "24 is not between 0 and 23"),
         (["backtest", "--until", "yesterday"], "'yesterday' is not an ISO 8601 time"),
+        (["backtest", "--last-origin", "soon"], "'soon' is not an ISO 8601 time"),
         (["transform", "--report-start", "2025-13-01"], "is not a date such as 2025-09-01"),
         (["export", "--half-hourly-days", "lots"], "'lots' is not a whole number"),
     ],
@@ -197,3 +198,22 @@ def test_restore_snapshots_command(
     status["code"] = 403
     assert main(["restore-snapshots", "https://example.test/data/forecast_snapshots/"]) == 2
     assert "could not read the snapshot manifest" in caplog.text
+
+
+def test_backtest_passes_the_pinned_last_origin(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from gridwatch import cli
+
+    seen = {}
+
+    def fake_job(settings: Settings, config: object, until: object) -> dict[str, object]:
+        seen["config"] = config
+        return {"metrics": []}
+
+    monkeypatch.setattr(cli, "run_backtest_job", fake_job)
+    settings = Settings.from_env({"GRIDWATCH_DATA_DIR": str(tmp_path)})
+    args = build_parser().parse_args(["backtest", "--last-origin", "2026-09-23"])
+    assert cli.cmd_backtest(args, settings) == 0
+    config = seen["config"]
+    assert config.last_origin_utc == datetime(2026, 9, 23, tzinfo=UTC)  # type: ignore[attr-defined]
