@@ -48,9 +48,18 @@ def _sha256(content: bytes) -> str:
 
 
 def publish_snapshots(raw_dir: Path, out_dir: Path) -> int:
-    """Copy every stored snapshot file to ``out_dir`` with a manifest; returns the row count."""
+    """Copy every stored snapshot file to ``out_dir`` with a manifest; returns the row count.
+
+    Only monthly data files are published. The empty placeholder that ``ensure_empty_datasets``
+    writes for a store with no data is skipped: publishing it would put a path into the
+    manifest that ``restore_snapshots`` rightly refuses, and every later run would stop.
+    """
     store = snapshot_store(raw_dir)
-    files = store.files()
+    files = [
+        path
+        for path in store.files()
+        if FILE_PATTERN.match(path.relative_to(store.root).as_posix())
+    ]
     if not files:
         return 0
     if out_dir.exists():
@@ -102,6 +111,8 @@ def restore_snapshots(fetcher: HttpFetcher, base_url: str, raw_dir: Path) -> Res
     store = snapshot_store(raw_dir)
     result = RestoreResult("restored")
     for entry in entries:
+        if not isinstance(entry, dict):
+            raise SnapshotMirrorError(f"unexpected entry in the manifest: {entry!r}")
         path = str(entry.get("path", ""))
         if not FILE_PATTERN.match(path):
             raise SnapshotMirrorError(f"unexpected file name in the manifest: {path!r}")

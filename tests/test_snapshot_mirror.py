@@ -13,7 +13,7 @@ import pytest
 
 from gridwatch.ingest.carbon_intensity import SNAPSHOT_SCHEMA
 from gridwatch.ingest.http import HttpFetcher
-from gridwatch.ingest.pipeline import snapshot_store
+from gridwatch.ingest.pipeline import ensure_empty_datasets, snapshot_store
 from gridwatch.ingest.snapshot_mirror import (
     SnapshotMirrorError,
     publish_snapshots,
@@ -80,6 +80,38 @@ def test_publish_without_snapshots_writes_nothing(tmp_path: Path) -> None:
     assert not (tmp_path / "out").exists()
 
 
+def test_the_empty_placeholder_is_never_published(
+    tmp_path: Path, fetcher_factory: Callable[..., HttpFetcher]
+) -> None:
+    """A run with no snapshot rows must not publish a manifest that later restores refuse."""
+    raw = tmp_path / "raw"
+    ensure_empty_datasets(raw)
+    assert snapshot_store(raw).files()  # the placeholder exists
+    site = tmp_path / "site" / "data" / "forecast_snapshots"
+    assert publish_snapshots(raw, site) == 0
+    assert not (site / "manifest.json").exists()
+    # The next run finds nothing published and carries on.
+    result = restore_snapshots(fetcher_factory(serve(site)), BASE, tmp_path / "next_raw")
+    assert result.status == "no-mirror"
+
+
+def test_placeholder_and_data_publish_only_the_data(
+    tmp_path: Path, fetcher_factory: Callable[..., HttpFetcher]
+) -> None:
+    raw = tmp_path / "raw"
+    ensure_empty_datasets(raw)
+    placeholder = next(iter(snapshot_store(raw).files()))
+    snapshot_store(raw).upsert(snapshot_rows(datetime(2026, 9, 1, 5, 0)))
+    placeholder.parent.mkdir(parents=True, exist_ok=True)
+    pl.DataFrame(schema=SNAPSHOT_SCHEMA).write_parquet(placeholder)  # left behind
+    site = tmp_path / "site"
+    assert publish_snapshots(raw, site) == 4
+    manifest = json.loads((site / "manifest.json").read_text(encoding="utf-8"))
+    assert [f["path"] for f in manifest["files"]] == ["2026/2026-09.parquet"]
+    restored = restore_snapshots(fetcher_factory(serve(site)), BASE, tmp_path / "next_raw")
+    assert (restored.status, restored.stats.inserted) == ("restored", 4)
+
+
 def test_restore_merges_into_an_empty_store_then_is_idempotent(
     published: Path, tmp_path: Path, fetcher_factory: Callable[..., HttpFetcher]
 ) -> None:
@@ -136,6 +168,8 @@ def test_an_unavailable_site_stops_the_restore(
     [
         b"not json",
         json.dumps({"files": [{"path": "../../etc/passwd", "sha256": "x"}]}).encode(),
+        json.dumps({"files": ["2026/2026-09.parquet"]}).encode(),
+        json.dumps({"files": None}).encode(),
     ],
 )
 def test_a_bad_manifest_stops_the_restore(
