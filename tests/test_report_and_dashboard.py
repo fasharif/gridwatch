@@ -210,6 +210,39 @@ def test_every_chart_has_a_spec_and_table() -> None:
             assert "role" in trace["meta"]
 
 
+@pytest.mark.parametrize(
+    ("field", "chart_id"),
+    [
+        ("regions", "regions"),
+        ("weekly_profile", "week"),
+        ("start_slots", "slots"),
+        ("strategies", "strategies"),
+        ("seasonal_profile", "seasons"),
+        ("monthly", "monthly"),
+        ("country_trend", "countries"),
+        ("backtest_by_horizon", "backtest"),
+    ],
+)
+def test_a_chart_without_rows_shows_its_empty_state(
+    field: str, chart_id: str, tmp_path: Path
+) -> None:
+    data = sample_data()
+    setattr(data, field, [])
+    chart = next(c for c in all_charts(data, 4) if c.chart_id == chart_id)
+    assert chart.spec is None
+    assert chart.rows == []
+    html = render(data, tmp_path / "site").read_text(encoding="utf-8")
+    card = html.split(f'id="card-{chart_id}"', 1)[1].split("</article>", 1)[0]
+    assert "No data yet for this chart." in card
+    assert "Show the numbers" not in card
+
+
+def test_next48_legend_sits_above_the_plot() -> None:
+    chart = all_charts(sample_data(), 4)[0]
+    assert chart.spec is not None
+    assert chart.spec["layout"]["legend"]["y"] > 1
+
+
 def test_kpi_tiles_include_the_model_when_backtested() -> None:
     tiles = kpi_tiles(sample_data())
     assert tiles[-1]["value"] == "42.5"

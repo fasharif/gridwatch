@@ -118,3 +118,6 @@ def test_site(pipeline: Path) -> None:
     docs = (pipeline / "site" / "dbt" / "index.html").read_text(encoding="utf-8")
     assert "exposure.gridwatch.gridwatch_dashboard" in docs
     assert 'href="dbt/index.html"' in html
+    # regional data in the fixture starts after the report window: an explicit empty state
+    regions = html.split('id="card-regions"', 1)[1].split("</article>", 1)[0]
+    assert "No data yet for this chart." in regions

@@ -3,6 +3,10 @@
 Specs are plain dictionaries (Plotly's JSON schema). Colours are not baked in: each trace
 carries ``meta.role`` (series-1, series-2, muted, band-1, heat) and the page script paints
 it from CSS custom properties, so light and dark themes use their own validated steps.
+
+A chart with no rows gets no spec, so the page shows an explicit empty state instead of
+blank axes (for example the regional chart when regional data starts after the report
+window).
 """
 
 from __future__ import annotations
@@ -45,6 +49,11 @@ class Chart:
             "rows": self.rows,
             "note": self.note,
         }
+
+
+def _empty(chart_id: str, title: str, subtitle: str) -> Chart:
+    """A chart with nothing to draw: the page shows its empty state and no table."""
+    return Chart(chart_id, title, subtitle, None)
 
 
 def _r(value: Any, digits: int = 1) -> Any:
@@ -109,6 +118,9 @@ def _band(
 
 
 def next_48_hours(data: DashboardData) -> Chart:
+    title = "The last two days and the next two"
+    if not (data.recent or data.model_forecast or data.api_snapshot):
+        return _empty("next48", title, "No recent GB data.")
     recent_x = [r["period_start_utc"] for r in data.recent]
     traces: list[Spec] = [
         _line(recent_x, [r["actual_gco2_kwh"] for r in data.recent], "Actual", "series-1"),
@@ -152,17 +164,25 @@ def next_48_hours(data: DashboardData) -> Chart:
         if data.model_forecast
         else "n/a"
     )
+    layout = _layout("gCO2/kWh", "UTC")
+    # Legend above the plot, so it is in view with the top of the chart (and the README
+    # screenshot) rather than below the axis.
+    layout["legend"] = {"orientation": "h", "y": 1.02, "yanchor": "bottom", "x": 0}
+    layout["margin"] = {"l": 56, "r": 16, "t": 32, "b": 48}
     return Chart(
         "next48",
-        "The last two days and the next two",
+        title,
         f"GB national intensity, gCO2/kWh, UTC. Model forecast issued {issued}.",
-        {"data": traces, "layout": _layout("gCO2/kWh", "UTC")},
+        {"data": traces, "layout": layout},
         ["Half-hour (UTC)", "Actual", "gridwatch forecast", "API forecast"],
         rows,
     )
 
 
 def weekly_heatmap(data: DashboardData) -> Chart:
+    title = "An average week"
+    if not data.weekly_profile:
+        return _empty("week", title, "No actual values in the report window.")
     slots = sorted({(r["time_key"], r["start_time_label"]) for r in data.weekly_profile})
     labels = [label for _, label in slots]
     grid: dict[tuple[int, int], Any] = {
@@ -187,7 +207,7 @@ def weekly_heatmap(data: DashboardData) -> Chart:
     rows = [[DAY_NAMES[d - 1], *z[d - 1]] for d in range(1, 8)]
     return Chart(
         "week",
-        "An average week",
+        title,
         "Mean actual intensity by UK local day and half-hour over the report window, gCO2/kWh.",
         {"data": [trace], "layout": layout},
         ["Day", *labels],
@@ -196,6 +216,9 @@ def weekly_heatmap(data: DashboardData) -> Chart:
 
 
 def start_slots(data: DashboardData, hours: int) -> Chart:
+    title = f"When to start a {hours}-hour flexible job"
+    if not data.start_slots:
+        return _empty("slots", title, "No complete job windows in the report window.")
     x = [r["start_time_label"] for r in data.start_slots]
     traces = [
         _line(
@@ -225,7 +248,7 @@ def start_slots(data: DashboardData, hours: int) -> Chart:
     ]
     return Chart(
         "slots",
-        f"When to start a {hours}-hour flexible job",
+        title,
         "Mean intensity the job would have seen, by start time, over the report window.",
         {"data": traces, "layout": layout},
         ["Start", "All days", "Working days", "Weekends and holidays", "Rank (1 = lowest)"],
@@ -234,6 +257,9 @@ def start_slots(data: DashboardData, hours: int) -> Chart:
 
 
 def strategies(data: DashboardData) -> Chart:
+    title = "Scheduling rules compared"
+    if not data.strategies:
+        return _empty("strategies", title, "No day in the report window has every rule scored.")
     ordered = list(reversed(data.strategies))
     trace: Spec = {
         "type": "bar",
@@ -263,7 +289,7 @@ def strategies(data: DashboardData) -> Chart:
     ]
     return Chart(
         "strategies",
-        "Scheduling rules compared",
+        title,
         "One run a day; the same days for every rule. Lower is better.",
         {"data": [trace], "layout": layout},
         [
@@ -281,6 +307,9 @@ def strategies(data: DashboardData) -> Chart:
 
 
 def seasonal_profile(data: DashboardData) -> Chart:
+    title = "The average day in each season"
+    if not data.seasonal_profile:
+        return _empty("seasons", title, "No actual values in the report window.")
     traces = []
     for index, season in enumerate(SEASONS, start=1):
         part = [r for r in data.seasonal_profile if r["season"] == season]
@@ -300,7 +329,7 @@ def seasonal_profile(data: DashboardData) -> Chart:
     rows = [[slot, *(by_slot[slot].get(s) for s in SEASONS)] for slot in sorted(by_slot)]
     return Chart(
         "seasons",
-        "The average day in each season",
+        title,
         "Mean actual intensity by UK local half-hour over the report window, gCO2/kWh.",
         {"data": traces, "layout": layout},
         ["Half-hour", *SEASONS],
@@ -309,6 +338,9 @@ def seasonal_profile(data: DashboardData) -> Chart:
 
 
 def monthly_trend(data: DashboardData) -> Chart:
+    title = "GB intensity month by month"
+    if not data.monthly:
+        return _empty("monthly", title, "No monthly values yet.")
     x = [r["month_start"] for r in data.monthly]
     traces = _band(
         x,
@@ -333,7 +365,7 @@ def monthly_trend(data: DashboardData) -> Chart:
     ]
     return Chart(
         "monthly",
-        "GB intensity month by month",
+        title,
         "Monthly mean and spread of half-hourly actual intensity, gCO2/kWh.",
         {"data": traces, "layout": _layout("gCO2/kWh")},
         ["Month", "Mean", "P10", "P90", "Low-carbon share %", "Coverage %"],
@@ -342,6 +374,13 @@ def monthly_trend(data: DashboardData) -> Chart:
 
 
 def regions(data: DashboardData) -> Chart:
+    title = "Regions of GB"
+    if not data.regions:
+        return _empty(
+            "regions",
+            title,
+            "No regional data in the report window (regional ingestion may start later).",
+        )
     ordered = list(reversed(data.regions))
     trace: Spec = {
         "type": "bar",
@@ -369,7 +408,7 @@ def regions(data: DashboardData) -> Chart:
     ]
     return Chart(
         "regions",
-        "Regions of GB",
+        title,
         "Mean regional forecast intensity over the report window. The API has no regional "
         "actuals, so these are modelled values.",
         {"data": [trace], "layout": layout},
@@ -382,6 +421,9 @@ HIGHLIGHT = {"ARE": "series-1", "GCC": "series-2", "GBR": "series-3", "EU27": "s
 
 
 def country_trend(data: DashboardData) -> Chart:
+    title = "UAE and GCC against the UK and EU"
+    if not data.country_trend:
+        return _empty("countries", title, "No Ember data yet.")
     traces: list[Spec] = []
     codes = sorted({r["country_code"] for r in data.country_trend})
     names = {r["country_code"]: r["country_name"] for r in data.country_trend}
@@ -406,7 +448,7 @@ def country_trend(data: DashboardData) -> Chart:
     rows = [[names[c], *(grid.get((c, y)) for y in years)] for c in order[::-1]]
     return Chart(
         "countries",
-        "UAE and GCC against the UK and EU",
+        title,
         "Annual lifecycle emissions intensity, gCO2e/kWh (Ember). Grey lines: other GCC "
         "members and the world average.",
         {"data": traces, "layout": _layout("gCO2e/kWh")},
