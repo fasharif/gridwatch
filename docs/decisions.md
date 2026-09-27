@@ -40,7 +40,7 @@ snake_case columns, failing loudly if an expected column disappears.
 **Consequences.** No secret to manage. The file is 16 MB but is only downloaded when Ember
 publishes a new version.
 
-## 5. Work with the API as it behaves, not as documented
+## 5. Work around the API's undocumented behaviour
 
 **Context.** Probing showed that range queries return half-hours by their end time, that
 `/generation` and `/regional/intensity` stop at the end of the `from` year, and that the API
@@ -53,7 +53,7 @@ re-request holes.
 **Consequences.** A fake API in the tests reproduces these behaviours, so a regression shows
 up as a failing test rather than silently missing data.
 
-## 6. Data quality: flag, do not hide
+## 6. Data quality: null bad values, flag them and keep them countable
 
 **Context.** The history holds upstream errors (forecasts of 13,579 gCO2/kWh, actuals of 0)
 and some half-hours the API never serves.
@@ -138,9 +138,10 @@ The dashboard must build in CI without secrets and deploy to GitHub Pages.
 JavaScript from the site itself.
 **Consequences.** One language and one toolchain for the whole project, no Node build, and
 charts read the same marts the tests cover. The trade-off is fewer layout conveniences than
-Evidence or Observable; the page is hand-built but small. Every chart has a table view, and
-the colours come from a colour-blind checked palette with separate light and dark steps. The
-template is always autoescaped. dbt's own static documentation (models, tests, lineage and
+Evidence or Observable; the page is hand-built but small. Every chart has a table view, or
+says why it has no data. Each series has its own colour, with separate steps for the light
+and dark themes, and the persistence line in the accuracy chart is also dotted, so it can be
+told from the model's line without relying on colour. The template is always autoescaped. dbt's own static documentation (models, tests, lineage and
 exposures) is published beside the page under `dbt/`, rather than rebuilding lineage views in
 the dashboard.
 
@@ -184,10 +185,13 @@ outside a source checkout.
 ## 14. Tests and CI never call the network
 
 **Context.** Tests that depend on a live API are slow and flaky, and results change daily.
-**Decision.** Unit tests use recorded responses and a fake API; pytest-socket blocks the
-network. CI replays a recorded cassette through the whole pipeline, including the dbt build
-and tests, with the freshness test pinned to the recording time.
-**Consequences.** CI is deterministic. The cassette must be re-recorded with
+**Decision.** Unit tests use recorded responses and a fake API, and pytest-socket blocks the
+network inside the pytest process. CI replays a recorded cassette through the whole pipeline,
+including the dbt build and tests, with the freshness test pinned to the recording time.
+**Consequences.** CI is deterministic. pytest-socket does not reach the dbt child processes
+that the end-to-end test starts; they need no network today (the whole suite passes in a
+container with networking disabled), but a future dbt package or DuckDB extension download
+would not be caught by the test run itself. The cassette must be re-recorded with
 `scripts/record_fixtures.py` if the API changes format.
 
 ## 15. The backtest runs weekly in the daily workflow
@@ -224,7 +228,8 @@ full commit SHA with the version as a comment (`@c18668a... # v10.2.0`). CI runs
 branch exists and whether each pinned SHA is the commit its version comment names.
 **Consequences.** A missing or mistyped version fails the lint job instead of every job, and
 a third-party tag cannot be moved under the workflow. Dependabot updates SHA pins and their
-comments together.
+comments together. The actionlint container image (`rhysd/actionlint:1.7.12`) is pinned in a
+`run` step of `ci.yml`, which Dependabot does not read, so it is updated by hand.
 
 ## 19. State the uncertainty of headline results
 

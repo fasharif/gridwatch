@@ -1,5 +1,5 @@
-/* gridwatch dashboard. Colour tokens follow a validated categorical palette; dark mode has
-   its own steps for the dark surface rather than an automatic inversion. */
+/* gridwatch dashboard. One colour token per chart series; dark mode has its own steps for
+   the dark surface rather than an automatic inversion. */
 :root {
   color-scheme: light;
   --page: #f9f9f7;

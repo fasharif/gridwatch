@@ -2,7 +2,7 @@
 
 Specs are plain dictionaries (Plotly's JSON schema). Colours are not baked in: each trace
 carries ``meta.role`` (series-1, series-2, muted, band-1, heat) and the page script paints
-it from CSS custom properties, so light and dark themes use their own validated steps.
+it from CSS custom properties, so light and dark themes use their own colour steps.
 
 A chart with no rows gets no spec, so the page shows an explicit empty state instead of
 blank axes (for example the regional chart when regional data starts after the report
