@@ -900,7 +900,9 @@ def _validation_section(outputs_dir: Path) -> list[str]:
         }
         coverage = {c["horizon_band"]: c["coverage_pct"] for c in run["interval_coverage"]}
         # Runs made before the lead-time breakdown existed have no first-hour figures.
-        first_hour = next((b for b in run.get("mae_by_lead", []) if b["lead_band"] == "0-1 h"), {})
+        first_hour: dict[str, Any] = next(
+            (b for b in run.get("mae_by_lead", []) if b["lead_band"] == "0-1 h"), {}
+        )
         rows.append(
             [
                 str(run.get("until_utc") or "")[:10],
