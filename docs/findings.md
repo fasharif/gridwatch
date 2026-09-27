@@ -9,9 +9,10 @@
 - **The UAE is cleaning up its grid; the rest of the GCC is not yet.** In 2024 a kWh in the
   UAE carried 2.16 times the emissions of a kWh in the UK, down 30.8% since 2015 thanks to
   nuclear power. The GCC as a whole was at 2.93 times the UK and has barely changed.
-- **Forecasting from past intensity alone has limits.** gridwatch's forecast beats simple
-  rules of thumb by a small but statistically clear margin, and it is far behind the grid
-  operator's own forecast, which uses weather and demand forecasts.
+- **Forecasting from past intensity alone has limits.** A day ahead, gridwatch's forecast
+  beats simple rules of thumb by a small but statistically clear margin. In the first few
+  hours it is slightly worse than simply repeating the last value, and at every lead time it
+  is far behind the grid operator's own forecast, which uses weather and demand forecasts.
 
 Four business questions, answered in SQL by the reporting models in
 `dbt/models/marts/reporting/`, plus the forecast backtest. Every number below appears in the
@@ -19,18 +20,33 @@ generated tables, [generated/report.md](generated/report.md), at the precision q
 `tests/test_docs_numbers.py` checks that, so a number typed by hand cannot drift from the
 pipeline.
 
-**The run.** GB and Ember data were ingested on 2026-09-25 (UTC). The warehouse was rebuilt
-and the report tables regenerated from the same raw data on 2026-09-26, on a Windows 11
-machine with Python 3.12.14, dbt-core 1.12.5, dbt-duckdb 1.11.0, DuckDB 1.5.5 and
-scikit-learn 1.9.1 (the report lists every version). GB data runs from 2017-09-26 to
+**The run.** GB and Ember data were ingested on 2026-09-25 (UTC). The warehouse was rebuilt,
+the backtests run and the report tables generated from that raw data on 2026-09-27, in a
+Linux container (Docker Desktop on a Windows 11 machine) with Python 3.12.14, dbt-core
+1.12.5, dbt-duckdb 1.11.0, DuckDB 1.5.5 and scikit-learn 1.9.1 (the report lists every
+version). An earlier build of the same raw data on Windows 11 gave identical tables for
+sections (a) to (d). GB data runs from 2017-09-26 to
 2026-09-25 21:00 UTC (157,771 half-hours). The Ember file is the version Ember last modified
 on 2026-09-22. The GB reporting window is the last 12 complete months, **1 September 2025 to
 31 August 2026** in UK local time.
 
-**To reproduce:** `uv run gridwatch ingest`, then `uv run gridwatch transform --report-start
-2025-09-01 --report-end 2026-08-31`, `uv run gridwatch backtest`, the validation runs in
-[forecast.md](forecast.md#model), and `uv run gridwatch report`. The API revises recent
-actuals, so a later run can differ slightly in the last decimals.
+**To reproduce:**
+
+```bash
+uv run gridwatch ingest --as-of "2026-09-25 21:30"
+uv run gridwatch transform --report-start 2025-09-01 --report-end 2026-08-31 --as-of "2026-09-25 22:00"
+uv run gridwatch backtest --until 2025-09-24 --test-days 84 --train-days 730
+uv run gridwatch backtest --last-origin 2026-09-23
+uv run gridwatch report
+```
+
+The third line is one of the validation runs; [forecast.md](forecast.md#model) lists the
+others. `--as-of` pins the end of the GB data, and `--last-origin` pins the test year of the
+backtest. Two inputs still move: the API revises recent actual values for a few days after
+each half-hour, and Ember is always downloaded at its latest release. A later run can
+therefore differ in the last decimals, and after a new Ember release in section (b); the
+Ember file used here is identified by its SHA-256 in [data.md](data.md). A past `--as-of`
+time also skips the forecast snapshot, which the API cannot give for the past.
 
 **Units.** GB figures are gCO2/kWh of operational emissions from the Carbon Intensity API.
 Country figures are Ember's lifecycle gCO2e/kWh, which also count fuel supply, methane leaks
@@ -43,7 +59,7 @@ The job studied runs for four hours at a constant load, once a day, and may star
 half-hour. For each possible start, the model `int_batch_job_windows` averages the actual
 intensity over the next eight half-hours.
 
-**Best time of day: late morning, not the night.** Over the window, a job starting at
+**Best time of day: late morning.** Over the window, a job starting at
 **10:30 UK time** saw 106.1 gCO2/kWh on average, the lowest of the 48 start times. Starting at
 **17:00** was the worst, at 149.5, which is 41% more carbon per kWh. The late-morning slot
 wins because solar output peaks around midday; the evening peak is when demand is highest and
@@ -54,8 +70,12 @@ Sunday at 09:30 to 10:30 (92.2 to 92.7) were the lowest-carbon starts of the wee
 17:00 was the highest (162.9).
 
 **Carbon saved against a fixed schedule.** Each rule below schedules one run per day over the
-same 363 complete days. The 95% intervals come from a moving-block bootstrap that resamples
-the days in blocks of 7 consecutive days, 2,000 times, keeping every rule on the same days:
+same 363 complete days. The other two days of the window are left out because an upstream
+value was removed from their job windows (an implausible actual at 11:00 UTC on 6 August
+2026 and an implausible forecast at 20:30 UTC on 23 August 2026), and a day counts only when
+every rule, the forecast rule included, can be scored. The 95% intervals come from a
+moving-block bootstrap that resamples the days in blocks of 7 consecutive days, 2,000 times,
+keeping every rule on the same days:
 
 | Rule | Mean gCO2/kWh | Saving vs 09:00 | 95% interval | Saving vs 17:00 | kg CO2 per run (100 kW, 4 h) |
 | --- | ---: | ---: | --- | ---: | ---: |
@@ -94,8 +114,8 @@ Ember's latest year with data for every compared area is **2024**.
 
 | Area | 2024 gCO2e/kWh | Times the UK | Change since 2015 | Main sources in 2024 |
 | --- | ---: | ---: | ---: | --- |
-| EU-27 | 211.6 | 0.98 | -39.2% | Nuclear 23%, wind and solar 29%, gas 16% |
-| United Kingdom | 216.5 | 1.00 | -45.6% | Wind and solar 35%, gas 30%, nuclear 14% |
+| EU-27 | 211.6 | 0.98 | -39.2% | Wind and solar 29%, nuclear 23%, gas 16%, hydro 13%, coal 10% |
+| United Kingdom | 216.5 | 1.00 | -45.6% | Wind and solar 35%, gas 30%, nuclear 14%, bioenergy 14% |
 | United Arab Emirates | 467.5 | 2.16 | -30.8% | Gas 68%, nuclear 23%, wind and solar 9% |
 | World (benchmark) | 473.7 | 2.19 | -11.3% | |
 | Oman | 542.9 | 2.51 | -4.3% | Gas 91% |
@@ -114,7 +134,8 @@ Ember's latest year with data for every compared area is **2024**.
   2015 to 2024, against 45.6% for the UK and 39.2% for the EU. In Kuwait and Saudi Arabia,
   oil and other non-gas fossil fuels still supply about a third of electricity.
 - **The gap is wide.** A kWh in the GCC carried 2.93 times the lifecycle emissions of a kWh
-  in the UK in 2024; in Bahrain, 4.17 times.
+  in the UK in 2024; in Bahrain, 4.17 times. Fossil fuels made up 29% of EU generation and 35%
+  of UK generation, against 68% in the UAE and 95% or more in the rest of the GCC.
 - **2025.** Ember already has 2025 figures for the UK (218.2, up slightly), the EU (209.9),
   Kuwait, Oman and Qatar, but not yet for the UAE, Saudi Arabia or Bahrain.
 
@@ -178,34 +199,48 @@ agreement between two of the API's own numbers.
 365 daily forecasts, issued at 00:00 UTC from 24 September 2025 to 23 September 2026, with the
 model retrained every 28 days on the previous 730 days (method in [forecast.md](forecast.md)).
 
-| Metric | gridwatch model | Same half-hour, last known day | Same half-hour, last week | API retained forecast |
-| --- | ---: | ---: | ---: | ---: |
-| MAE, 0-24 h | **32.3** | 39.9 | 54.4 | 9.9 |
-| MAE, 24-48 h | **42.5** | 47.9 | 54.3 | 9.9 |
-| RMSE, 24-48 h | **51.6** | 61.4 | 68.9 | 14.1 |
-| MAPE, 24-48 h | **44.4%** | 47.5% | 53.4% | 9.4% |
+| Metric | gridwatch model | Persistence (last known value) | Same half-hour, last known day | Same half-hour, last week | API retained forecast |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| MAE, 0-24 h | **27.9** | 36.1 | 39.9 | 54.4 | 9.9 |
+| MAE, 24-48 h | **41.0** | 51.5 | 47.9 | 54.3 | 9.9 |
+| RMSE, 24-48 h | **49.7** | 65.4 | 61.4 | 68.9 | 14.1 |
+| MAPE, 24-48 h | **43.0%** | 49.1% | 47.5% | 53.4% | 9.4% |
 
-- **Against the naive baselines the model helps, modestly, and the gain is not noise.** For
-  the 24-48 hour band its MAE is 11% lower than repeating the last known day and 22% lower
-  than repeating last week. Diebold-Mariano tests on the daily errors reject equal accuracy
-  against both baselines: at 24-48 h the statistic is -2.91 (p = 0.004) against the last
-  known day and -5.28 (p < 0.001) against last week.
-- **It still loses often.** It beat the last-known-day baseline on only 211 of 365 days
-  (57.8%) for the 24-48 hour band, so it lost on 42.2% of days. It was worse in September and
-  October 2025 (October MAE 64.7 against 50.6) and worse than the last-week baseline in April
-  2026 (43.1 against 39.7).
+- **In the first hours, repeating the last value is still slightly better.** Intensity changes
+  little from one half-hour to the next, so persistence is hard to beat early on: its MAE was
+  3.5 in the first hour against 3.6 for the model, and 9.1 against 10.2 from 1 to 4 hours
+  ahead. From 4 hours ahead the model is clearly better (26.7 against 35.3 for 4 to 12 hours).
+  The first version of the model was several times worse than persistence in the first
+  hours; [forecast.md](forecast.md#model) describes the change and what it means for this
+  test year.
+- **A day ahead the model beats all three naive baselines, and the gain is not noise.** For
+  the 24-48 hour band its MAE is 14% lower than repeating the last known day, 20% lower than
+  persistence and 25% lower than repeating last week. Diebold-Mariano tests on the daily
+  errors reject equal accuracy against each of them (p < 0.001; against the last known day
+  the statistic is -3.86).
+- **It still loses often.** It beat the last-known-day baseline on 228 of 365 days (62.5%)
+  for the 24-48 hour band, so it lost on 37.5% of days. It was worse than that baseline in
+  October 2025 (MAE 62.3 against 50.6, and 45.0 for persistence) and worse than the last-week
+  baseline in April 2026 (40.8 against 39.7).
 - **It is far behind the API.** The API's retained forecast (MAE 9.9 on the same test
   sample) is refreshed every half-hour and, according to its methodology, is built from
   forecasts of demand and of generation by fuel type. It is issued close to each half-hour,
   so it is not a like-for-like comparison, but the gap shows how much of GB intensity depends
   on wind and demand, which a model that sees only past intensity and the calendar cannot
   anticipate a day ahead.
-- **Its uncertainty is well calibrated.** The 10-90% interval covered 79.6% (0-24 h) and
-  79.4% (24-48 h) of actual values, close to the 80% target, with a mean width of 126.0
-  gCO2/kWh at 24-48 hours.
-- **The settings were chosen before the test year.** On a validation period that ended
-  before the first test forecast, 730 training days gave a 24-48 h MAE of 33.7, against 36.7
-  for 365 days and 34.2 for 1,460 days (validation table in the report).
+- **Its interval is calibrated on average, not month by month.** The 10-90% interval covered
+  81.7% (0-24 h) and 80.5% (24-48 h) of actual values, close to the 80% target, with a mean
+  width of 127.1 gCO2/kWh at 24-48 hours. Month by month, coverage at 24-48 hours ranged from
+  70.6% (October 2025) to 89.9% (December 2025), so in a given month the stated range can be
+  too narrow or too wide.
+- **How the settings were chosen, and what this year can show.** 730 training days and a
+  56-day calibration were the first version's defaults. A validation period that ended before
+  the first test forecast later compared training windows: with the current model, 730 days
+  gave a 24-48 h MAE of 33.2, against 35.2 for 365 days and 34.2 for 1,460 days (validation
+  table in the report). The model's design was changed after the results for this test year
+  had been seen, so the year is not an untouched hold-out for that change; the validation
+  period, on which the change was checked before the test year was run again, is the
+  cleaner evidence.
 - **MAPE looks large** because low-intensity half-hours turn small absolute errors into large
   percentages.
 

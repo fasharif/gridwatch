@@ -26,9 +26,11 @@ page; once the repository is published it will be served at
 - In 2024 a kWh in the **UAE** carried **2.16 times** the lifecycle emissions of a kWh in the
   UK, and the GCC as a whole **2.93 times**. The UAE's intensity fell 30.8% between 2015 and
   2024, mostly thanks to nuclear power; the rest of the GCC barely moved.
-- gridwatch's 24-48 hour forecast had an MAE of **42.5 gCO2/kWh**, 11% better than repeating
-  the last known day (Diebold-Mariano p = 0.004), but it lost to that baseline on 42.2% of
-  days and is far behind the API's own short-lead forecast (MAE 9.9 on the same test year).
+- gridwatch's 24-48 hour forecast had an MAE of **41.0 gCO2/kWh**, 14% better than repeating
+  the last known day and 20% better than repeating the last value (Diebold-Mariano p < 0.001
+  for both), but it lost to the last-known-day baseline on 37.5% of days. In the first hours
+  it is slightly worse than repeating the last value, and it is far behind the API's own
+  short-lead forecast (MAE 9.9 on the same test year).
 
 ## The problem
 
@@ -252,7 +254,8 @@ and the runbook for new upstream gaps are in [docs/data.md](docs/data.md).
 
 **Known limitations**
 
-- The forecast uses no weather, demand or generation forecasts, so it cannot match the API.
+- The forecast uses no weather, demand or generation forecasts, so it cannot match the API,
+  and in the first four hours it is slightly worse than repeating the last known value.
 - Regional values are the API's modelled forecasts; there are no regional actuals.
 - Ember's GCC figures rest on annual statistics and one gas emission factor per country.
 - Revised API actuals overwrite old values; the history of revisions is not kept.
@@ -265,7 +268,8 @@ and the runbook for new upstream gaps are in [docs/data.md](docs/data.md).
 
 **Roadmap**
 
-1. Add wind and demand forecasts as model inputs.
+1. Add wind and demand forecasts as model inputs, and try blending the model with
+   persistence for the first hours, with weights chosen on validation data.
 2. Report day-ahead API accuracy from the stored snapshots once enough have matured, then
    backtest a model that uses the API's own day-ahead forecast as an input.
 3. Monthly Ember data for the GCC, to show the summer cooling peak.

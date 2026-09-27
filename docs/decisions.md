@@ -91,26 +91,44 @@ state their window and the command to reproduce them.
 **Context.** The spec allows statsforecast, scikit-learn or LightGBM. The model needs
 calendar features (bank holidays), many horizons and prediction intervals.
 **Decision.** One scikit-learn `HistGradientBoostingRegressor` for all 96 horizons, predicting
-the change from the trailing 24-hour mean, with conformally calibrated quantile models for
-the interval. Details and the comparison with LightGBM and statsforecast are in
+the change from the last known value, with the level features restated relative to that value
+and every horizon given equal weight in training. Quantile models, conformally calibrated per
+6-hour band of lead time, give the interval. Details, the first design and why it was
+changed, and the comparison with LightGBM and statsforecast are in
 [forecast.md](forecast.md).
 **Consequences.** Pure wheels, no system libraries, one dependency already common in data
 teams. Without weather inputs the model cannot match the API's own forecast, which the
 findings say plainly.
 
-## 10. Honest evaluation against baselines and the API
+## 10. Evaluate against baselines and the API, and record the order of work
 
 **Context.** A forecast is only useful if it beats something simple, and the API's own
-forecast history is not a day-ahead record.
-**Decision.** Rolling-origin backtest over a year, retraining every 28 days, against two
-seasonal naive baselines and the API's retained forecast, on a common sample, with monthly
-errors and win rates. Store the API's 48-hour forecast on every run so a like-for-like
-comparison becomes possible.
+forecast history is not a day-ahead record. A test year also stops being a clean hold-out
+once its results have shaped the model.
+**Decision.** Rolling-origin backtest over a year, retraining every 28 days, against
+persistence (the last known value), two seasonal naive baselines and the API's retained
+forecast, on a common sample, with errors by lead time and by month and win rates.
+`--last-origin` pins the test period so a later run tests the same days. Store the API's
+48-hour forecast on every run so a like-for-like comparison becomes possible.
 **Consequences.** The results show where the model loses, and Diebold-Mariano tests say
-whether its gains are larger than chance (record 19). Settings are chosen on validation runs
-before the test year; each run keeps its own files (named after its cutoff, training window
-and calibration period) and the report lists them all. The snapshot comparison needs weeks of
-daily runs before it says anything.
+whether its gains are larger than chance (record 19). Each validation run keeps its own files
+(named after its cutoff, training window and calibration period) and the report lists them
+all. The order of work is part of the record, because it decides how much the test year can
+be trusted:
+
+1. The first model's settings (730 training days, 56 calibration days) were defaults before
+   any validation run existed. Validation runs on data before the test year later compared
+   training windows.
+2. Persistence was not a baseline at first. When it was added, the test-year results showed
+   the first model far worse than persistence in the first hours, so the model was
+   redesigned (record 9). The test year therefore informed the current design and is not a
+   clean hold-out for that choice.
+3. The redesigned model was run on the validation period first, where it also fixed the
+   first hours and 730 days again gave the lowest 24-48 h error of the three windows, and only
+   then on the test year. The `generated_at_utc` times in the output summaries show this
+   order.
+
+The snapshot comparison needs weeks of daily runs before it says anything.
 
 ## 11. Dashboard: generated HTML with Plotly
 

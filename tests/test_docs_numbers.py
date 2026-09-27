@@ -31,13 +31,24 @@ NUMBER = re.compile(r"(?<![\w.])\d{1,3}(?:,\d{3})+(?:\.\d+)?|(?<![\w.])\d+(?:\.\
 REGIONS = [
     ("docs/findings.md", "# Findings", None),
     ("README.md", "**Headline results**", "## Features"),
-    ("docs/forecast.md", "Training uses one origin", "## Why scikit-learn"),
+    ("docs/forecast.md", "## Model", "## Why scikit-learn"),
 ]
 
 ALLOWED = {
+    "docs/findings.md": {
+        "21:30": "--as-of time of the ingest step in the reproduction commands, a setting",
+        "22:00": "--as-of time of the transform step in the reproduction commands, a setting",
+    },
     "docs/forecast.md": {
         "0.05": "learning rate, a model setting",
         "300": "boosting iterations, a model setting",
+        "31": "leaves per tree, a model setting",
+        "50": "minimum samples per leaf, a model setting",
+        "1.0": "L2 penalty, a model setting",
+        "20.3": (
+            "first-hour validation MAE of the first model design, which the current code no "
+            "longer has; reproduced on 2026-09-27 by running the code before commit 7a39552"
+        ),
     },
 }
 
