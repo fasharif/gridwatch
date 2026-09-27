@@ -53,7 +53,8 @@ def _fmt(value: Any, decimals: int) -> str:
     if isinstance(value, float):
         if math.isnan(value):
             return "n/a"
-        return f"{value:,.{decimals}f}"
+        # "z" prints a value that rounds to zero as 0.0, never -0.0.
+        return f"{value:z,.{decimals}f}"
     return str(value)
 
 

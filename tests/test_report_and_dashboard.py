@@ -20,6 +20,8 @@ def test_markdown_table_formats_numbers() -> None:
     assert lines[1] == "| --- | ---: | ---: |"
     assert lines[2] == "| a | 1,234.6 | 3 |"
     assert lines[3] == "| b | n/a | 4 |"
+    negative_zero = markdown_table(pl.DataFrame({"bias": [-0.03, -0.06]}), decimals=1)
+    assert negative_zero.splitlines()[2:] == ["| 0.0 |", "| -0.1 |"]
 
 
 def test_markdown_table_needs_one_header_per_column() -> None:
