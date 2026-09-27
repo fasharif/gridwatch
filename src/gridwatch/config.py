@@ -8,6 +8,7 @@ confusing error half-way through an ingestion run.
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -24,6 +25,9 @@ USER_AGENT = "gridwatch/0.1 (+https://github.com/fasharif/gridwatch)"
 NATIONAL_EARLIEST = datetime(2017, 9, 26, tzinfo=UTC)
 GENERATION_EARLIEST = datetime(2018, 5, 10, 23, 30, tzinfo=UTC)
 REGIONAL_EARLIEST = datetime(2018, 5, 10, 23, 30, tzinfo=UTC)
+
+# A DuckDB memory_limit such as 2GB, 512MB or 1.5GiB.
+MEMORY_SIZE = re.compile(r"^\d+(\.\d+)?\s*(KB|MB|GB|TB|KiB|MiB|GiB|TiB)$", re.IGNORECASE)
 
 
 class ConfigError(ValueError):
@@ -42,6 +46,7 @@ class Settings:
     min_request_interval_s: float
     max_attempts: int
     timeout_s: float
+    duckdb_memory: str = "2GB"
     carbon_api_base: str = CARBON_INTENSITY_API
     ember_yearly_url: str = EMBER_YEARLY_CSV
     user_agent: str = USER_AGENT
@@ -85,7 +90,18 @@ class Settings:
             timeout_s=_float_setting(
                 source, "GRIDWATCH_HTTP_TIMEOUT", 60.0, minimum=1.0, maximum=600.0
             ),
+            duckdb_memory=_memory_setting(source, "GRIDWATCH_DUCKDB_MEMORY", "2GB"),
         )
+
+
+def _memory_setting(env: Mapping[str, str], name: str, default: str) -> str:
+    raw = env.get(name)
+    if raw is None or raw.strip() == "":
+        return default
+    value = raw.strip()
+    if not MEMORY_SIZE.match(value):
+        raise ConfigError(f"{name}={raw!r} is not a memory size such as 2GB, 512MB or 1.5GiB")
+    return value
 
 
 def _date_setting(

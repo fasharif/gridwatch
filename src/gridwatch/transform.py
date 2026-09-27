@@ -56,6 +56,7 @@ def dbt_environment(settings: Settings) -> dict[str, str]:
     return {
         "GRIDWATCH_DATA_DIR": settings.data_dir.as_posix(),
         "GRIDWATCH_WAREHOUSE": settings.warehouse_path.as_posix(),
+        "GRIDWATCH_DUCKDB_MEMORY": settings.duckdb_memory,
         "DBT_SEND_ANONYMOUS_USAGE_STATS": "false",
     }
 
