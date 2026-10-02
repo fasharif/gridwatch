@@ -1,0 +1,51 @@
+version: 2
+
+models:
+  - name: stg_ember__yearly_electricity
+    description: >
+      Ember yearly electricity data for every area, year and source. Emissions and intensity
+      are lifecycle CO2-equivalent figures (Ember methodology), not operational CO2.
+      Range tests here cover all ~200 areas; anomalies in areas gridwatch does not use
+      (for example negative emissions for Costa Rica in 2025 in the September 2026 file)
+      are reported as warnings. The strict checks sit on the country marts.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [area, year, electricity_source]
+    columns:
+      - name: area
+        data_tests:
+          - not_null
+      - name: year
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 1980
+                max_value: 2100
+      - name: electricity_source
+        data_tests:
+          - not_null
+      - name: share_of_generation_pct
+        description: >
+          Share of generation. Demand and net imports are also expressed against generation,
+          so they can exceed 100 and are excluded from the range check.
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100.5
+              config:
+                where: "not is_aggregated_source and electricity_source <> 'Net imports'"
+                # The September 2026 file has 11 small negative 2025 shares, all in areas
+                # gridwatch does not compare (Spain, Belgium, Costa Rica and others).
+                warn_if: ">0"
+                error_if: ">50"
+      - name: emissions_intensity_gco2e_kwh
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1500
+              config:
+                severity: warn

@@ -1,0 +1,238 @@
+version: 2
+
+models:
+  - name: dim_date
+    description: Calendar dimension in UK local dates, with bank holidays and seasons.
+    columns:
+      - name: date_key
+        description: Surrogate key, yyyymmdd as an integer.
+        data_tests: [not_null, unique]
+      - name: calendar_date
+        data_tests: [not_null, unique]
+      - name: season
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [Winter, Spring, Summer, Autumn]
+
+  - name: dim_time_of_day
+    description: The 48 half-hour slots of a UK local day.
+    columns:
+      - name: time_key
+        data_tests:
+          - not_null
+          - unique
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 47
+
+  - name: dim_region
+    description: GB DNO regions and the England, Scotland, Wales and GB aggregates.
+    columns:
+      - name: region_id
+        data_tests: [not_null, unique]
+
+  - name: dim_fuel
+    description: Fuel types in the GB generation mix and how they are grouped.
+    columns:
+      - name: fuel
+        data_tests: [not_null, unique]
+
+  - name: dim_country
+    description: Countries and regions in the international comparison (Ember areas).
+    columns:
+      - name: country_code
+        data_tests: [not_null, unique]
+      - name: latest_year
+        description: Latest year with Ember data; null would mean the area vanished from the file.
+        data_tests:
+          - not_null
+
+  - name: fct_national_intensity
+    description: >
+      One row per GB settlement half-hour (UTC). Measures are gCO2/kWh; implausible
+      upstream values are null and flagged. Generation shares are percentages.
+    columns:
+      - name: period_start_utc
+        data_tests:
+          - not_null
+          - unique
+          - no_half_hour_gaps:
+              arguments:
+                dataset: none_allowed
+      - name: date_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: time_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_time_of_day')
+                field: time_key
+      - name: actual_gco2_kwh
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: "{{ var('plausible_min_gco2_kwh') }}"
+                max_value: "{{ var('plausible_max_gco2_kwh') }}"
+      - name: forecast_gco2_kwh
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: "{{ var('plausible_min_gco2_kwh') }}"
+                max_value: "{{ var('plausible_max_gco2_kwh') }}"
+      - name: forecast_error_gco2_kwh
+        description: Forecast minus actual; positive means the forecast was too high.
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: -400
+                max_value: 400
+
+  - name: fct_generation_mix
+    description: One row per GB half-hour and fuel, share in percent.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [period_start_utc, fuel]
+    columns:
+      - name: fuel
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_fuel')
+                field: fuel
+      - name: date_key
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+
+  - name: fct_regional_intensity
+    description: One row per half-hour and region; forecast intensity only.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [period_start_utc, region_id]
+    columns:
+      - name: region_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_region')
+                field: region_id
+      - name: date_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: time_key
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_time_of_day')
+                field: time_key
+
+  - name: fct_regional_generation_mix_daily
+    description: Mean regional generation share per UK local date, region and fuel.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [date_key, region_id, fuel]
+    columns:
+      - name: region_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_region')
+                field: region_id
+      - name: fuel
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_fuel')
+                field: fuel
+      - name: date_key
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+
+  - name: fct_api_forecast_snapshots
+    description: >
+      The API's 48-hour forecast per issue time and target half-hour, with the actual.
+      Forecasts outside the plausible range are null and flagged, as in the national fact.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [issued_at_utc, period_start_utc]
+    columns:
+      - name: forecast_gco2_kwh
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: "{{ var('plausible_min_gco2_kwh') }}"
+                max_value: "{{ var('plausible_max_gco2_kwh') }}"
+      - name: is_forecast_implausible
+        data_tests:
+          - not_null
+      - name: date_key
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+
+  - name: fct_country_electricity_annual
+    description: Ember yearly data per country, year and electricity source.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [country_code, year, electricity_source]
+    columns:
+      - name: country_code
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_country')
+                field: country_code
+
+  - name: fct_country_intensity_annual
+    description: >
+      Lifecycle emissions intensity (gCO2e/kWh) and generation mix per country and year.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [country_code, year]
+    columns:
+      - name: country_code
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_country')
+                field: country_code
+      - name: intensity_gco2e_kwh
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1500
+      - name: gas_share_pct
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100.5

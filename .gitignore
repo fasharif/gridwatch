@@ -2,10 +2,9 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
-.venv/
-venv/
-build/
-dist/
+/.venv/
+/build/
+/dist/
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
@@ -18,19 +17,22 @@ htmlcov/
 .env.*
 !.env.example
 
-# Pipeline data (raw Parquet, DuckDB warehouse and model outputs are rebuilt, never committed)
-data/
+# Pipeline data: raw Parquet, the DuckDB warehouse and model outputs are rebuilt, never committed
+/data/
 *.duckdb
 *.duckdb.wal
 
 # dbt
-dbt/target/
-dbt/dbt_packages/
-dbt/logs/
-logs/
+/dbt/target/
+/dbt/dbt_packages/
+/dbt/logs/
+/logs/
 
-# Built dashboard
-site/
+# Built dashboard, and the output folders the CI workflows use
+/site/
+/ci-data/
+/ci-output/
+/site-extra/
 
 # Editors and OS
 .vscode/

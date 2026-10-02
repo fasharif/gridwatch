@@ -1,0 +1,53 @@
+{
+  "https://api.carbonintensity.org.uk/generation/2026-07-23T00:30Z/2026-08-22T00:00Z": {
+    "body": "8cf59256d17c185c.gz",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "status": 200
+  },
+  "https://api.carbonintensity.org.uk/generation/2026-08-22T00:30Z/2026-09-20T00:00Z": {
+    "body": "691eed7e29b41bf4.gz",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "status": 200
+  },
+  "https://api.carbonintensity.org.uk/intensity/2026-07-23T00:30Z/2026-08-22T00:00Z": {
+    "body": "f2b22d7d905b50df.gz",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "status": 200
+  },
+  "https://api.carbonintensity.org.uk/intensity/2026-08-22T00:30Z/2026-09-20T00:00Z": {
+    "body": "d1dd09fb0ab3eb60.gz",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "status": 200
+  },
+  "https://api.carbonintensity.org.uk/intensity/2026-09-20T00:00Z/fw48h": {
+    "body": "495792d10d5f34a5.gz",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "status": 200
+  },
+  "https://api.carbonintensity.org.uk/regional/intensity/2026-09-16T00:30Z/2026-09-20T00:00Z": {
+    "body": "aaa04b5fa4315072.gz",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "status": 200
+  },
+  "https://files.ember-energy.org/public-downloads/generation/outputs/release_generation_yearly_global.csv": {
+    "body": "700d5f692f32d7ea.gz",
+    "headers": {
+      "content-type": "text/csv;charset=utf-8",
+      "etag": "\"67122835394a3edc9da6e56901f3d640\"",
+      "last-modified": "Tue, 22 Sep 2026 16:24:55 GMT"
+    },
+    "status": 200
+  }
+}

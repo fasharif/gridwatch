@@ -1,0 +1,49 @@
+time_key,start_time_label,hour_of_day,minute_of_hour,day_part,is_evening_peak
+0,00:00,0,0,Night (00:00-06:59),false
+1,00:30,0,30,Night (00:00-06:59),false
+2,01:00,1,0,Night (00:00-06:59),false
+3,01:30,1,30,Night (00:00-06:59),false
+4,02:00,2,0,Night (00:00-06:59),false
+5,02:30,2,30,Night (00:00-06:59),false
+6,03:00,3,0,Night (00:00-06:59),false
+7,03:30,3,30,Night (00:00-06:59),false
+8,04:00,4,0,Night (00:00-06:59),false
+9,04:30,4,30,Night (00:00-06:59),false
+10,05:00,5,0,Night (00:00-06:59),false
+11,05:30,5,30,Night (00:00-06:59),false
+12,06:00,6,0,Night (00:00-06:59),false
+13,06:30,6,30,Night (00:00-06:59),false
+14,07:00,7,0,Morning (07:00-11:59),false
+15,07:30,7,30,Morning (07:00-11:59),false
+16,08:00,8,0,Morning (07:00-11:59),false
+17,08:30,8,30,Morning (07:00-11:59),false
+18,09:00,9,0,Morning (07:00-11:59),false
+19,09:30,9,30,Morning (07:00-11:59),false
+20,10:00,10,0,Morning (07:00-11:59),false
+21,10:30,10,30,Morning (07:00-11:59),false
+22,11:00,11,0,Morning (07:00-11:59),false
+23,11:30,11,30,Morning (07:00-11:59),false
+24,12:00,12,0,Afternoon (12:00-15:59),false
+25,12:30,12,30,Afternoon (12:00-15:59),false
+26,13:00,13,0,Afternoon (12:00-15:59),false
+27,13:30,13,30,Afternoon (12:00-15:59),false
+28,14:00,14,0,Afternoon (12:00-15:59),false
+29,14:30,14,30,Afternoon (12:00-15:59),false
+30,15:00,15,0,Afternoon (12:00-15:59),false
+31,15:30,15,30,Afternoon (12:00-15:59),false
+32,16:00,16,0,Evening peak (16:00-18:59),true
+33,16:30,16,30,Evening peak (16:00-18:59),true
+34,17:00,17,0,Evening peak (16:00-18:59),true
+35,17:30,17,30,Evening peak (16:00-18:59),true
+36,18:00,18,0,Evening peak (16:00-18:59),true
+37,18:30,18,30,Evening peak (16:00-18:59),true
+38,19:00,19,0,Evening (19:00-23:59),false
+39,19:30,19,30,Evening (19:00-23:59),false
+40,20:00,20,0,Evening (19:00-23:59),false
+41,20:30,20,30,Evening (19:00-23:59),false
+42,21:00,21,0,Evening (19:00-23:59),false
+43,21:30,21,30,Evening (19:00-23:59),false
+44,22:00,22,0,Evening (19:00-23:59),false
+45,22:30,22,30,Evening (19:00-23:59),false
+46,23:00,23,0,Evening (19:00-23:59),false
+47,23:30,23,30,Evening (19:00-23:59),false

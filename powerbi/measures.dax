@@ -1,0 +1,143 @@
+// gridwatch DAX measures for the star schema in powerbi/data.
+// Status: written against the CSV column names, NOT yet tested in Power BI Desktop
+// (it cannot run on the machine this project was built on). See powerbi/README.md.
+// Create a table called "Measures" (Enter data, one empty column) and add each measure to it.
+
+// ---------- GB national, half-hourly fact (last 90 days in the committed snapshot) ----------
+
+Mean Intensity (gCO2/kWh) =
+AVERAGE ( fct_national_intensity_half_hourly[actual_gco2_kwh] )
+
+Mean API Forecast (gCO2/kWh) =
+AVERAGE ( fct_national_intensity_half_hourly[forecast_gco2_kwh] )
+
+API Forecast MAE (gCO2/kWh) =
+AVERAGEX (
+    FILTER (
+        fct_national_intensity_half_hourly,
+        NOT ISBLANK ( fct_national_intensity_half_hourly[actual_gco2_kwh] )
+            && NOT ISBLANK ( fct_national_intensity_half_hourly[forecast_gco2_kwh] )
+    ),
+    ABS (
+        fct_national_intensity_half_hourly[forecast_gco2_kwh]
+            - fct_national_intensity_half_hourly[actual_gco2_kwh]
+    )
+)
+
+API Forecast MAPE % =
+AVERAGEX (
+    FILTER (
+        fct_national_intensity_half_hourly,
+        fct_national_intensity_half_hourly[actual_gco2_kwh] > 0
+            && NOT ISBLANK ( fct_national_intensity_half_hourly[forecast_gco2_kwh] )
+    ),
+    DIVIDE (
+        ABS (
+            fct_national_intensity_half_hourly[forecast_gco2_kwh]
+                - fct_national_intensity_half_hourly[actual_gco2_kwh]
+        ),
+        fct_national_intensity_half_hourly[actual_gco2_kwh]
+    )
+) * 100
+
+Low-Carbon Share % =
+AVERAGE ( fct_national_intensity_half_hourly[low_carbon_pct] )
+
+Lowest-Carbon Half-Hour =
+VAR Slots =
+    ADDCOLUMNS (
+        VALUES ( dim_time_of_day[start_time_label] ),
+        "@Mean", [Mean Intensity (gCO2/kWh)]
+    )
+RETURN
+    MAXX ( TOPN ( 1, Slots, [@Mean], ASC ), dim_time_of_day[start_time_label] )
+
+Evening Peak Premium % =
+VAR Peak =
+    CALCULATE ( [Mean Intensity (gCO2/kWh)], dim_time_of_day[is_evening_peak] = TRUE () )
+VAR AllDay =
+    CALCULATE ( [Mean Intensity (gCO2/kWh)], REMOVEFILTERS ( dim_time_of_day ) )
+RETURN
+    DIVIDE ( Peak - AllDay, AllDay ) * 100
+
+// ---------- GB national, daily fact (full history) ----------
+
+Daily Mean Intensity (gCO2/kWh) =
+// Weighted by the number of half-hours with an actual value, so partial days count less.
+DIVIDE (
+    SUMX (
+        fct_national_intensity_daily,
+        fct_national_intensity_daily[mean_actual_gco2_kwh]
+            * fct_national_intensity_daily[periods_with_actual]
+    ),
+    SUM ( fct_national_intensity_daily[periods_with_actual] )
+)
+
+Intensity vs Same Period Last Year % =
+VAR ThisPeriod = [Daily Mean Intensity (gCO2/kWh)]
+VAR LastYear =
+    CALCULATE ( [Daily Mean Intensity (gCO2/kWh)], SAMEPERIODLASTYEAR ( dim_date[calendar_date] ) )
+RETURN
+    DIVIDE ( ThisPeriod - LastYear, LastYear ) * 100
+
+// ---------- Generation mix, daily fact ----------
+
+Mean Share % =
+DIVIDE (
+    SUMX (
+        fct_generation_mix_daily,
+        fct_generation_mix_daily[mean_share_pct] * fct_generation_mix_daily[periods]
+    ),
+    SUM ( fct_generation_mix_daily[periods] )
+)
+
+Wind Share % =
+CALCULATE ( [Mean Share %], dim_fuel[fuel] = "wind" )
+
+// ---------- Regions, daily fact ----------
+
+Regional Mean Forecast (gCO2/kWh) =
+DIVIDE (
+    SUMX (
+        fct_regional_intensity_daily,
+        fct_regional_intensity_daily[mean_forecast_gco2_kwh]
+            * fct_regional_intensity_daily[periods]
+    ),
+    SUM ( fct_regional_intensity_daily[periods] )
+)
+
+// ---------- Countries, annual fact (Ember, lifecycle gCO2e/kWh) ----------
+
+Country Intensity (gCO2e/kWh) =
+// Generation-weighted, so selecting several countries gives a combined figure
+// (for example the GCC as a whole) rather than an average of averages.
+DIVIDE (
+    SUM ( fct_country_intensity_annual[emissions_mtco2e] ) * 1000,
+    SUM ( fct_country_intensity_annual[generation_twh] )
+)
+
+Country Intensity vs UK (x) =
+VAR Selected = [Country Intensity (gCO2e/kWh)]
+VAR UK =
+    CALCULATE (
+        [Country Intensity (gCO2e/kWh)],
+        REMOVEFILTERS ( dim_country ),
+        dim_country[country_code] = "GBR"
+    )
+RETURN
+    DIVIDE ( Selected, UK )
+
+Country Intensity Change Since 2015 % =
+VAR LatestYear = MAX ( fct_country_intensity_annual[year] )
+VAR Latest =
+    CALCULATE (
+        [Country Intensity (gCO2e/kWh)],
+        fct_country_intensity_annual[year] = LatestYear
+    )
+VAR Base =
+    CALCULATE (
+        [Country Intensity (gCO2e/kWh)],
+        fct_country_intensity_annual[year] = 2015
+    )
+RETURN
+    DIVIDE ( Latest - Base, Base ) * 100

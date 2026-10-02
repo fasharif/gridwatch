@@ -1,0 +1,50 @@
+version: 2
+
+# dbt unit tests: fixed inputs, expected outputs, run by `dbt build` before the model.
+
+unit_tests:
+  - name: national_spine_fills_gaps_and_removes_implausible_values
+    description: >
+      A missing half-hour becomes a row with null measures, and values outside the plausible
+      range are nulled and flagged rather than dropped.
+    model: int_national_half_hours
+    given:
+      - input: ref('stg_carbon_intensity__national_intensity')
+        rows:
+          - {period_start_utc: "2026-01-01 00:00:00", forecast_gco2_kwh: 100, actual_gco2_kwh: 110, intensity_index: "moderate"}
+          - {period_start_utc: "2026-01-01 01:00:00", forecast_gco2_kwh: 5, actual_gco2_kwh: 0, intensity_index: "very low"}
+    expect:
+      rows:
+        - {period_start_utc: "2026-01-01 00:00:00", time_key: 0, forecast_gco2_kwh: 100, actual_gco2_kwh: 110, is_missing_from_source: false, is_actual_implausible: false, is_forecast_implausible: false, is_actual_missing: false}
+        - {period_start_utc: "2026-01-01 00:30:00", time_key: 1, forecast_gco2_kwh: null, actual_gco2_kwh: null, is_missing_from_source: true, is_actual_implausible: false, is_forecast_implausible: false, is_actual_missing: true}
+        - {period_start_utc: "2026-01-01 01:00:00", time_key: 2, forecast_gco2_kwh: null, actual_gco2_kwh: null, is_missing_from_source: false, is_actual_implausible: true, is_forecast_implausible: true, is_actual_missing: true}
+
+  - name: national_spine_uses_uk_summer_time
+    description: In British Summer Time, 23:30 UTC on 1 July is 00:30 on 2 July, slot 1.
+    model: int_national_half_hours
+    given:
+      - input: ref('stg_carbon_intensity__national_intensity')
+        rows:
+          - {period_start_utc: "2026-07-01 23:30:00", forecast_gco2_kwh: 100, actual_gco2_kwh: 100}
+    expect:
+      rows:
+        - {period_start_utc: "2026-07-01 23:30:00", local_date: "2026-07-02", date_key: 20260702, time_key: 1}
+
+  - name: batch_job_windows_need_complete_data
+    description: >
+      With a one-hour job, only windows whose two half-hours both have an actual and a
+      forecast are kept, and the means are over exactly those two half-hours.
+    model: int_batch_job_windows
+    overrides:
+      vars:
+        batch_job_hours: 1
+    given:
+      - input: ref('int_national_half_hours')
+        rows:
+          - {period_start_utc: "2026-01-01 00:00:00", date_key: 20260101, time_key: 0, actual_gco2_kwh: 100, forecast_gco2_kwh: 90}
+          - {period_start_utc: "2026-01-01 00:30:00", date_key: 20260101, time_key: 1, actual_gco2_kwh: 200, forecast_gco2_kwh: 210}
+          - {period_start_utc: "2026-01-01 01:00:00", date_key: 20260101, time_key: 2, actual_gco2_kwh: null, forecast_gco2_kwh: 50}
+          - {period_start_utc: "2026-01-01 01:30:00", date_key: 20260101, time_key: 3, actual_gco2_kwh: 50, forecast_gco2_kwh: 50}
+    expect:
+      rows:
+        - {job_start_utc: "2026-01-01 00:00:00", time_key: 0, job_actual_avg: 150, job_forecast_avg: 150}

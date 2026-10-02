@@ -1,0 +1,169 @@
+# Data
+
+## Sources and attribution
+
+| Source | What gridwatch uses | Licence | Where |
+| --- | --- | --- | --- |
+| **Carbon Intensity API**, National Energy System Operator (NESO) | National half-hourly forecast and actual intensity (from 2017-09-26), national generation mix (from 2018-05-10), regional forecast intensity and mix for 14 DNO regions and 4 aggregates (from 2023-01-01 by default), and the 48-hour forecast as issued on each run | CC BY 4.0, under the [API terms of use](https://github.com/carbon-intensity/terms) | <https://api.carbonintensity.org.uk>, documented at <https://carbon-intensity.github.io/api-definitions/> |
+| **Ember Yearly Electricity Data** | Annual generation, emissions and lifecycle emissions intensity by source for the UAE, Saudi Arabia, Qatar, Kuwait, Bahrain, Oman, the UK, the EU-27 and the world | CC BY 4.0 | <https://ember-energy.org/data/yearly-electricity-data/>, bulk file `release_generation_yearly_global.csv` |
+
+Attribution text used on the dashboard and in exports: "Carbon Intensity API, National
+Energy System Operator (CC BY 4.0)" and "Ember Yearly Electricity Data (CC BY 4.0)". gridwatch
+is not affiliated with NESO or Ember and does not use their logos. The API terms say NESO
+applies an unpublished rate limit, so the client waits at least one second between requests.
+
+**Version used for the committed findings.** API data fetched on 2026-09-25 (UTC). Ember file
+with `Last-Modified: Tue, 22 Sep 2026 16:24:55 GMT`, SHA-256
+`ea214963f4a98b26f52aaf541736d4310349a905e64f83e63425bfc3ab6255d7`, 104,203 rows. Every run
+records the ETag, Last-Modified time and hash in `data/raw/ember/yearly_electricity/manifest.json`.
+
+## What the two sources measure
+
+| | Carbon Intensity API | Ember |
+| --- | --- | --- |
+| Area | Great Britain (no Northern Ireland) | Country or region |
+| Resolution | Half-hour | Year |
+| Emissions counted | Operational emissions at the point of generation, including imports; wind, solar and nuclear count as zero (see `/intensity/factors`) | Lifecycle: fuel supply, methane leaks, construction; every gas converted to CO2-equivalent over 100 years |
+| Unit | gCO2/kWh | gCO2e/kWh |
+| Actual or model | Forecast plus an estimated actual (national only); regional values are forecasts | Annual statistics times emission factors |
+
+Because of these differences Ember's UK figure (216.5 gCO2e/kWh in 2024) is far above the
+API's GB mean (125.1 gCO2/kWh in 2024). Compare within a source, not across them.
+
+## API behaviour gridwatch relies on
+
+Found by probing the API in September 2026 and handled in `src/gridwatch/ingest/carbon_intensity.py`:
+
+- A range query returns every half-hour whose **end** is in `[from, to]`. To fetch the
+  half-hours starting in `[a, b)`, gridwatch asks for `from = a + 30 min`, `to = b`.
+- `/intensity` and `/generation` reject ranges over 31 days; `/regional/intensity` rejects
+  ranges of 14 days or more. gridwatch uses 30-day and 13-day chunks.
+- `/generation` and `/regional/intensity` silently stop at the end of the calendar year of
+  `from`: a request from 15 December to 10 January returns December only. The first full
+  backfill lost up to 30 days at the start of each year to this, until chunks were split at
+  year boundaries. The half-hour starting 23:30 on 31 December ends in the new year, and the
+  API files it there.
+- `from` must be earlier than `to`, so a single missing half-hour is requested with one
+  extra half-hour, which the parser drops.
+- For past half-hours the API keeps only its latest forecast. `/intensity/{t}/fw48h` for a
+  past `t` returns those retained values, not the forecast as it stood at `t`.
+- Actual values for the latest half-hours are revised: the same half-hour returned 180 and
+  then 173 gCO2/kWh a few minutes apart. Each run re-requests the last two days
+  (`GRIDWATCH_REFETCH_DAYS`).
+
+## Raw storage
+
+`gridwatch ingest` writes Parquet under `data/raw/`, one file per calendar month of the
+period start (`carbon_intensity/national_intensity/2025/2025-01.parquet`). Timestamps are
+naive UTC. Each row carries `fetched_at_utc`.
+
+- **Idempotent.** A row is rewritten only when a value changed, and a month file only when a
+  row in it changed. Running the same ingestion twice leaves every file byte-for-byte
+  unchanged (`tests/test_pipeline.py`).
+- **Incremental.** Each run requests the configured start to now if nothing is stored,
+  backfills if the configured start moved earlier, and otherwise re-requests only the last two
+  days. `--repair-gaps` also re-requests every hole inside the stored history.
+- **Safe to interrupt.** Rows are saved after every request, and files are written to a
+  temporary name and renamed. A failed run says how many requests succeeded and resumes on the
+  next run.
+- **Ember** is downloaded with a conditional GET (`If-None-Match`, `If-Modified-Since`), so a
+  daily run downloads the 16 MB file only when Ember has published a new version. If the
+  download or the file's format fails and a copy is already stored, the run logs a warning,
+  keeps that copy (status `failed-kept-previous` in the ingest report) and carries on with
+  the GB data. With no stored copy the run stops.
+- **Forecast snapshots** are the one dataset the API cannot give back: it keeps only its
+  latest forecast for each half-hour. `gridwatch site` publishes the snapshot files with a
+  manifest of row counts and SHA-256 hashes under `data/forecast_snapshots/` on the
+  dashboard, and `gridwatch restore-snapshots URL` merges them back into `data/raw/` with the
+  same idempotent upsert. The daily workflow restores them before it ingests (see
+  [decision 12](decisions.md#12-keeping-history-between-scheduled-runs)). An ingest with
+  `--as-of` more than half an hour in the past skips the snapshot and logs why, because the
+  API would answer with its retained values rather than the forecast as issued; only a
+  replayed cassette and `scripts/record_fixtures.py` store one for a past time.
+
+The full history (September 2017 to September 2026, regional from 2023) takes about 27 MB of
+Parquet.
+
+## Data quality
+
+**Gaps the API itself has.** After re-requesting every missing half-hour with
+`--repair-gaps`, these remained, so they are upstream gaps rather than ingestion failures.
+They are listed in `dbt/seeds/known_source_gaps.csv`, and the `no_half_hour_gaps` test fails on
+any gap that is not listed.
+
+| Dataset | Gaps | Missing half-hours |
+| --- | ---: | ---: |
+| National intensity | 5 (2021 to 2024) | 179 |
+| National generation mix | 7 (2018 to 2025) | 414 |
+| Regional intensity | 4 (2023 to 2025, all regions) | 129 |
+
+**Implausible values.** The national history holds forecasts of 1,545 to 13,579 gCO2/kWh
+(December 2018 to July 2019), forecasts of 5 to 7 when the actual was 145 to 181, and actuals
+of 0 (2023 and 2026). GB national intensity has stayed roughly between 20 and 500. Values
+outside 10 to 700 gCO2/kWh are set to null in `int_national_half_hours` and flagged
+(`is_actual_implausible`, `is_forecast_implausible`): 6 actuals and 22 forecasts in the
+current history. `fct_api_forecast_snapshots` applies the same rule to the stored 48-hour
+forecasts (none so far). Warn-level tests in staging count them, and fail the build if more
+than 100 appear.
+
+**Missing actuals.** 625 national half-hours that the API serves have no actual value, 308 of them in 2019.
+They stay null; the gap-free fact table marks them with `is_actual_missing`.
+
+**Ember anomalies outside the compared areas.** The September 2026 file has negative 2025
+values for some areas gridwatch does not compare (for example Costa Rica's total emissions).
+Staging tests over all areas report these as warnings; the strict tests sit on the country
+marts, which contain only the compared areas.
+
+**Bank holidays.** `dim_date` takes England and Wales bank holidays from
+`dbt/seeds/uk_bank_holidays.csv`, generated for 2017 to 2028 from the `holidays` package (the
+forecast uses the same package directly). A warn-level test fires once the calendar reaches
+the seed's last year, and an error-level test fails the build when the calendar goes beyond
+it. To extend it, raise `LAST_YEAR` in `scripts/generate_bank_holidays.py`, run
+`uv run python scripts/generate_bank_holidays.py` and commit the seed.
+
+### When the gap test fails
+
+The API has had a new permanent outage roughly once a year (the seed above). When the next
+one happens, `no_half_hour_gaps` fails with error severity, so the daily build stops before
+the Pages deploy and the dashboard keeps showing the last good build until the gap is
+recorded. That is deliberate: an unrecorded gap could just as well be an ingestion fault.
+
+1. Read the failing test's rows in the workflow log (or run `uv run gridwatch transform`
+   locally): `gap_after_utc`, `resumes_at_utc` and `missing_periods` for the dataset.
+2. Re-request the hole in the workflow's own history: *Actions > Daily pipeline > Run
+   workflow* with *repair_gaps* ticked. That run passes `--repair-gaps` to `gridwatch
+   ingest`, which re-requests every hole in the cached raw data (for regional data, region
+   by region), saves the result to the cache and, if the gap test then passes, deploys. A
+   repair on your own machine does not help here: the workflow restores its raw data from
+   the Actions cache, not from your copy. If the cache itself is broken, delete the
+   `gridwatch-raw-*` entries under *Actions > Caches*; the next run then backfills the whole
+   history from the API (about 335 requests).
+3. If the gap is still there, check the API directly for that range to confirm it is
+   upstream (locally, `uv run gridwatch ingest --repair-gaps` shows whether the API serves
+   it), then add a row to `dbt/seeds/known_source_gaps.csv` with the dataset, the two
+   timestamps, the number of missing half-hours and a note with the date of the check.
+4. Commit the seed. The next scheduled run (or a manual one) builds and deploys again.
+
+## Warehouse layout
+
+dbt builds a DuckDB file (`data/warehouse/gridwatch.duckdb`) with these schemas:
+
+| Schema | Contents |
+| --- | --- |
+| `staging` | Views over the raw Parquet with types and names cleaned |
+| `intermediate` | The gap-free national half-hour spine with UK local time keys and cleaning, the generation mix pivoted, Ember pivoted per country and year, and batch-job windows |
+| `marts` | Dimensions `dim_date`, `dim_time_of_day`, `dim_region`, `dim_fuel`, `dim_country`; facts `fct_national_intensity`, `fct_generation_mix`, `fct_regional_intensity`, `fct_regional_generation_mix_daily`, `fct_api_forecast_snapshots`, `fct_country_electricity_annual`, `fct_country_intensity_annual` |
+| `reporting` | One model per business question (`rpt_*`) |
+| `reference` | Seeds: regions, fuels, countries, bank holidays, known source gaps |
+
+Facts are keyed by UTC time; `date_key` and `time_key` point to UK local dates and half-hour
+slots, because people schedule in local time. On clock-change days a local slot can occur
+twice (October) or not at all (March).
+
+## Exports
+
+- `exports/annual_grid_intensity.csv`: annual lifecycle intensity for the UAE, the other GCC
+  countries, the UK and the EU from 2000, with generation, emissions, source URL and licence
+  on every row, for use in other projects' carbon estimates. Regenerate with
+  `gridwatch export`.
+- `powerbi/data/`: the star schema as CSV (see [powerbi/README.md](../powerbi/README.md)).

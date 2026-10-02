@@ -1,0 +1,159 @@
+name: Daily pipeline
+
+# Fetches new data, rebuilds the warehouse, refreshes the forecast and publishes the
+# dashboard to GitHub Pages. Raw data and model outputs live in the Actions cache between
+# runs; if the cache has been evicted the run backfills history from the API. The API's
+# forecast snapshots cannot be fetched again, so they are also published with the site and
+# restored from it at the start of each run (docs/decisions.md, record 12).
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      backtest:
+        description: Run the 365-day backtest even if today is not Monday
+        type: boolean
+        default: false
+      repair_gaps:
+        description: Re-request every hole in the cached raw history (see the runbook in docs/data.md)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-pipeline
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Ingest, transform, forecast and build the site
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GRIDWATCH_DATA_DIR: data
+      RUN_BACKTEST: ${{ inputs.backtest }}
+      REPAIR_GAPS: ${{ inputs.repair_gaps }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+
+      - name: Restore raw data
+        uses: actions/cache/restore@v6
+        with:
+          path: data/raw
+          key: gridwatch-raw-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: gridwatch-raw-
+      - name: Restore model outputs
+        uses: actions/cache/restore@v6
+        with:
+          path: data/outputs
+          key: gridwatch-outputs-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: gridwatch-outputs-
+
+      - name: Restore forecast snapshots from the published site
+        # 404 before the first deploy is expected; any other failure stops the run, so a
+        # site with fewer snapshots than the live one is never deployed.
+        env:
+          SNAPSHOT_MIRROR_URL: ${{ vars.SNAPSHOT_MIRROR_URL }}
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          url="${SNAPSHOT_MIRROR_URL:-https://${owner}.github.io/${GITHUB_REPOSITORY#*/}/data/forecast_snapshots/}"
+          bash scripts/ci_timed.sh restore-snapshots uv run gridwatch restore-snapshots "$url"
+
+      - name: Ingest new data
+        id: ingest
+        # A normal run re-requests only the last GRIDWATCH_REFETCH_DAYS. The raw history comes
+        # back from the cache, so an older hole stays until a manual run with repair_gaps.
+        run: |
+          args=()
+          if [ "$REPAIR_GAPS" = "true" ]; then
+            args+=(--repair-gaps)
+          fi
+          bash scripts/ci_timed.sh ingest uv run gridwatch ingest "${args[@]}"
+      - name: Save raw data
+        if: always() && steps.ingest.outcome != 'skipped'
+        uses: actions/cache/save@v6
+        with:
+          path: data/raw
+          key: gridwatch-raw-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: dbt build
+        run: bash scripts/ci_timed.sh transform uv run gridwatch transform
+      - name: Forecast the next 48 hours
+        run: bash scripts/ci_timed.sh forecast uv run gridwatch forecast
+      - name: Backtest (Mondays, on request, or when no result is cached)
+        run: |
+          if [ "$RUN_BACKTEST" = "true" ] || [ "$(date -u +%u)" = "1" ] \
+             || [ ! -f data/outputs/backtest_summary.json ]; then
+            bash scripts/ci_timed.sh backtest uv run gridwatch backtest
+          else
+            echo "Using the cached backtest from $(jq -r .generated_at_utc data/outputs/backtest_summary.json)"
+          fi
+      - name: Save model outputs
+        uses: actions/cache/save@v6
+        with:
+          path: data/outputs
+          key: gridwatch-outputs-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Exports, report, dbt docs and dashboard
+        run: |
+          csv=site-extra/annual_grid_intensity.csv
+          bash scripts/ci_timed.sh export \
+            uv run gridwatch export --annual-csv "$csv" --powerbi-dir site/downloads/powerbi
+          bash scripts/ci_timed.sh report uv run gridwatch report --out site-extra/report.md
+          bash scripts/ci_timed.sh docs uv run gridwatch docs --out site/dbt
+          bash scripts/ci_timed.sh site uv run gridwatch site --out site --annual-csv "$csv"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: report-and-exports
+          path: site-extra/
+          retention-days: 30
+      - name: Keep a second copy of the forecast snapshots
+        uses: actions/upload-artifact@v7
+        with:
+          name: forecast-snapshots
+          path: site/data/forecast_snapshots/
+          retention-days: 90
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+      - name: Step timings
+        # scripts/ci_timed.sh wrote one line per step to $RUNNER_TEMP/gridwatch-timings.tsv.
+        if: always()
+        env:
+          TIMINGS_FILE: ${{ runner.temp }}/gridwatch-timings.tsv
+        run: |
+          {
+            echo "### gridwatch step timings"
+            echo
+            memory_gb="$(free -g | awk '/^Mem:/ {print $2}')"
+            echo "Runner: ${ImageOS:-unknown} ${ImageVersion:-}, $(nproc) CPUs, ${memory_gb} GB memory."
+            echo
+            echo "| Step | Seconds | Exit code |"
+            echo "| --- | ---: | ---: |"
+            if [ -f "$TIMINGS_FILE" ]; then
+              awk -F '\t' '{ printf "| %s | %s | %s |\n", $1, $2, $3 }' "$TIMINGS_FILE"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

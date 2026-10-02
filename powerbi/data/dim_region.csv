@@ -1,0 +1,19 @@
+region_id,region_short_name,nation,is_aggregate
+1,North Scotland,Scotland,false
+2,South Scotland,Scotland,false
+3,North West England,England,false
+4,North East England,England,false
+5,Yorkshire,England,false
+6,North Wales & Merseyside,Wales,false
+7,South Wales,Wales,false
+8,West Midlands,England,false
+9,East Midlands,England,false
+10,East England,England,false
+11,South West England,England,false
+12,South England,England,false
+13,London,England,false
+14,South East England,England,false
+15,England,England,true
+16,Scotland,Scotland,true
+17,Wales,Wales,true
+18,GB,Great Britain,true

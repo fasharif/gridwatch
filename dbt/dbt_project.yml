@@ -1,0 +1,78 @@
+name: gridwatch
+version: "0.1.0"
+config-version: 2
+profile: gridwatch
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+analysis-paths: ["analyses"]
+clean-targets: ["target", "dbt_packages"]
+
+flags:
+  send_anonymous_usage_stats: false
+
+vars:
+  # Treat this UTC timestamp as "now" for freshness tests. Leave null to use the clock.
+  as_of: null
+  # Reporting window (local UK dates, inclusive). Null means the last 12 complete
+  # calendar months in the data.
+  report_start_date: null
+  report_end_date: null
+  # Length of the flexible batch job studied in the reporting models, in hours.
+  batch_job_hours: 4
+  # Illustrative power draw of that job, used only to express savings in kg of CO2.
+  batch_job_kw: 100
+  # Trailing days used by the "historical profile" scheduling strategy.
+  profile_lookback_days: 28
+  # National values outside this range are treated as upstream errors (see
+  # int_national_half_hours). GB has never been below about 20 or above about 500.
+  plausible_min_gco2_kwh: 10
+  plausible_max_gco2_kwh: 700
+  # Freshness threshold for the national series.
+  recency_max_hours: 36
+
+seeds:
+  gridwatch:
+    +schema: reference
+    gb_regions:
+      +column_types:
+        region_id: smallint
+        is_aggregate: boolean
+    fuels:
+      +column_types:
+        is_fossil: boolean
+        is_renewable: boolean
+        is_low_carbon: boolean
+    countries:
+      +column_types:
+        is_gcc: boolean
+        sort_order: integer
+    uk_bank_holidays:
+      +column_types:
+        holiday_date: date
+    known_source_gaps:
+      +column_types:
+        gap_after_utc: timestamp
+        resumes_at_utc: timestamp
+
+models:
+  gridwatch:
+    staging:
+      +schema: staging
+      +materialized: view
+    intermediate:
+      +schema: intermediate
+      +materialized: table
+    marts:
+      core:
+        +schema: marts
+        +materialized: table
+      reporting:
+        +schema: reporting
+        +materialized: table
+
+data_tests:
+  gridwatch:
+    +severity: error

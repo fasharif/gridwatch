@@ -1,0 +1,77 @@
+version: 2
+
+models:
+  - name: int_national_half_hours
+    description: >
+      Gap-free half-hourly spine for the national series with UK local time keys.
+      Implausible values are nulled and flagged.
+    columns:
+      - name: period_start_utc
+        data_tests:
+          - not_null
+          - unique
+          - no_half_hour_gaps:
+              arguments:
+                dataset: none_allowed
+      - name: actual_gco2_kwh
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: "{{ var('plausible_min_gco2_kwh') }}"
+                max_value: "{{ var('plausible_max_gco2_kwh') }}"
+      - name: time_key
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 47
+
+  - name: int_generation_mix_wide
+    description: National generation mix pivoted to one row per half-hour.
+    columns:
+      - name: period_start_utc
+        data_tests:
+          - not_null
+          - unique
+      - name: low_carbon_pct
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 101.5
+
+  - name: int_regional_half_hours
+    description: Regional forecast intensity with UK local time.
+    columns:
+      - name: period_start_utc
+        data_tests:
+          - not_null
+
+  - name: int_ember_country_year
+    description: One row per compared country or region and year, with source shares pivoted.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [country_code, year]
+    columns:
+      - name: intensity_gco2e_kwh
+        data_tests:
+          - not_null
+
+  - name: int_batch_job_windows
+    description: >
+      Mean actual and forecast intensity of a job of batch_job_hours hours for every
+      possible start half-hour (complete windows only).
+    columns:
+      - name: job_start_utc
+        data_tests:
+          - not_null
+          - unique
+      - name: job_actual_avg
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: "{{ var('plausible_min_gco2_kwh') }}"
+                max_value: "{{ var('plausible_max_gco2_kwh') }}"

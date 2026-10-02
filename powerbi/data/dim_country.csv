@@ -1,0 +1,10 @@
+country_code,country_name,ember_area,peer_group,is_gcc,sort_order,first_year,latest_year
+ARE,United Arab Emirates,United Arab Emirates,GCC,true,1,1985,2024
+SAU,Saudi Arabia,Saudi Arabia,GCC,true,2,1985,2024
+QAT,Qatar,Qatar,GCC,true,3,2000,2025
+KWT,Kuwait,Kuwait,GCC,true,4,2000,2025
+BHR,Bahrain,Bahrain,GCC,true,5,2000,2024
+OMN,Oman,Oman,GCC,true,6,2000,2025
+GBR,United Kingdom,United Kingdom,UK,false,7,1985,2025
+EU27,European Union (EU-27),EU,EU,false,8,2000,2025
+WLD,World,World,Benchmark,false,9,2000,2025

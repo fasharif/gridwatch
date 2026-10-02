@@ -1,0 +1,21 @@
+{
+  "generated_at_utc": "2026-09-25T22:38:15Z",
+  "national_actuals_through_utc": "2026-09-25 21:00:00",
+  "half_hourly_days": 90,
+  "tables": {
+    "dim_date.csv": 3289,
+    "dim_time_of_day.csv": 48,
+    "dim_region.csv": 18,
+    "dim_fuel.csv": 9,
+    "dim_country.csv": 9,
+    "fct_national_intensity_half_hourly.csv": 4321,
+    "fct_national_intensity_daily.csv": 3287,
+    "fct_generation_mix_daily.csv": 27504,
+    "fct_regional_intensity_daily.csv": 24534,
+    "fct_country_intensity_annual.csv": 276
+  },
+  "sources": [
+    "Carbon Intensity API, National Energy System Operator (NESO), CC BY 4.0",
+    "Ember Yearly Electricity Data, CC BY 4.0"
+  ]
+}

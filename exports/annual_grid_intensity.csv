@@ -1,0 +1,206 @@
+country_code,country_name,peer_group,year,intensity_gco2e_per_kwh,generation_twh,emissions_mtco2e,emissions_basis,source,source_url,licence,is_latest_year
+EU27,European Union (EU-27),EU,2000,419.0,2622.18,1098.782,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2001,409.1,2698.92,1104.131,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2002,419.6,2722.12,1142.181,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2003,424.2,2799.93,1187.742,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2004,412.0,2867.55,1181.46,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2005,409.9,2884.39,1182.313,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2006,408.7,2932.31,1198.364,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2007,413.0,2947.71,1217.503,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2008,392.4,2959.78,1161.345,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2009,382.4,2808.34,1073.889,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2010,369.4,2945.54,1087.934,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2011,376.7,2908.69,1095.624,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2012,371.9,2903.47,1079.728,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2013,357.1,2883.69,1029.746,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2014,342.9,2823.91,968.226,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2015,348.3,2870.37,999.819,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2016,341.4,2891.4,987.21,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2017,340.4,2922.98,995.075,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2018,321.3,2908.62,934.413,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2019,287.3,2874.5,825.975,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2020,261.2,2753.09,719.102,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2021,272.5,2874.99,783.522,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2022,291.6,2777.41,809.806,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2023,236.0,2710.19,639.624,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2024,211.6,2771.53,586.585,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+EU27,European Union (EU-27),EU,2025,209.9,2798.42,587.329,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,true
+ARE,United Arab Emirates,GCC,2000,676.7,39.94,27.029,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2001,676.7,43.17,29.215,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2002,676.7,46.85,31.705,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2003,676.7,49.45,33.465,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2004,676.7,52.41,35.468,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2005,676.7,60.7,41.078,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2006,676.7,62.44,42.256,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2007,676.7,78.76,53.3,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2008,676.7,80.46,54.45,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2009,676.7,85.7,57.99,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2010,676.6,93.95,63.567,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2011,676.6,99.13,67.072,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2012,676.6,106.21,71.864,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2013,676.2,109.99,74.378,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2014,675.1,116.54,78.672,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2015,675.3,127.38,86.014,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2016,675.2,129.61,87.511,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2017,673.2,134.57,90.597,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2018,671.2,136.01,91.288,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2019,660.1,138.45,91.391,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2020,645.7,137.31,88.658,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2021,605.3,149.05,90.219,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2022,558.5,155.42,86.806,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2023,483.8,167.53,81.049,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+ARE,United Arab Emirates,GCC,2024,467.5,177.26,82.874,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,true
+BHR,Bahrain,GCC,2000,904.8,13.86,12.54,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2001,904.7,14.62,13.227,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2002,904.7,15.26,13.806,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2003,904.7,15.7,14.204,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2004,904.8,16.15,14.612,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2005,904.8,19.37,17.525,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2006,898.8,21.04,18.91,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2007,901.9,21.72,19.589,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2008,904.7,22.82,20.646,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2009,904.7,22.56,20.411,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2010,904.7,23.82,21.551,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2011,904.7,24.34,22.021,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2012,904.7,24.77,22.41,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2013,904.7,25.91,23.442,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2014,904.4,27.26,24.655,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2015,904.4,28.49,25.767,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2016,904.5,28.52,25.795,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2017,904.4,29.23,26.437,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2018,904.4,29.55,26.726,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2019,904.2,33.11,29.939,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2020,904.2,33.38,30.183,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2021,903.7,33.91,30.645,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2022,902.8,35.68,32.213,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2023,902.7,37.47,33.823,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+BHR,Bahrain,GCC,2024,902.5,37.95,34.249,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,true
+KWT,Kuwait,GCC,2000,653.6,32.33,21.131,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2001,653.9,34.3,22.429,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2002,655.1,36.37,23.825,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2003,654.7,39.8,26.057,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2004,654.3,41.26,26.996,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2005,654.7,43.73,28.628,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2006,653.8,47.6,31.121,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2007,653.7,48.75,31.87,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2008,653.2,51.75,33.805,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2009,654.2,53.22,34.814,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2010,653.4,57.03,37.262,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2011,652.8,57.46,37.508,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2012,651.1,61.12,39.798,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2013,651.9,60.99,39.76,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2014,651.0,65.15,42.411,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2015,650.5,68.3,44.43,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2016,650.1,70.1,45.569,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2017,650.6,68.89,44.817,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2018,650.1,74.13,48.194,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2019,649.6,75.04,48.747,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2020,650.2,74.64,48.532,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2021,649.6,80.8,52.486,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2022,636.8,85.29,54.314,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2023,636.1,89.76,57.095,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2024,635.3,92.49,58.756,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+KWT,Kuwait,GCC,2025,634.7,89.22,56.63,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,true
+OMN,Oman,GCC,2000,580.6,9.11,5.289,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2001,581.1,9.74,5.66,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2002,581.4,10.33,6.006,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2003,581.4,10.71,6.227,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2004,581.4,11.5,6.686,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2005,579.4,12.65,7.329,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2006,578.6,13.29,7.69,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2007,566.3,14.17,8.024,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2008,566.7,16.05,9.095,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2009,566.6,18.45,10.454,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2010,566.7,19.81,11.226,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2011,566.8,21.87,12.396,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2012,566.9,25.02,14.183,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2013,567.1,26.24,14.88,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2014,567.0,29.13,16.518,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2015,567.1,32.75,18.571,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2016,567.2,34.23,19.414,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2017,567.0,36.15,20.497,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2018,566.7,37.76,21.399,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2019,566.5,38.89,22.031,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2020,565.4,38.2,21.6,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2021,559.1,41.0,22.923,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2022,545.1,42.4,23.112,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2023,542.6,45.0,24.415,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2024,542.9,49.1,26.655,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+OMN,Oman,GCC,2025,544.4,52.84,28.766,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,true
+QAT,Qatar,GCC,2000,603.7,9.13,5.512,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2001,603.7,9.95,6.007,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2002,603.7,10.94,6.604,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2003,603.7,12.01,7.25,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2004,603.7,13.23,7.987,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2005,603.7,14.4,8.693,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2006,603.7,17.08,10.311,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2007,603.7,19.46,11.748,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2008,603.7,21.62,13.052,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2009,603.7,24.16,14.585,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2010,603.7,28.14,16.988,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2011,603.7,30.73,18.551,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2012,603.6,34.8,21.004,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2013,602.8,34.75,20.947,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2014,602.6,38.8,23.379,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2015,602.4,41.63,25.079,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2016,602.5,42.44,25.568,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2017,602.5,45.7,27.532,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2018,602.4,48.06,28.953,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2019,602.6,50.0,30.132,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2020,602.6,49.4,29.766,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2021,602.5,51.79,31.205,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2022,596.8,54.75,32.673,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2023,584.3,56.38,32.94,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2024,581.7,56.68,32.971,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+QAT,Qatar,GCC,2025,581.9,57.18,33.271,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,true
+SAU,Saudi Arabia,GCC,2000,692.4,138.69,96.022,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2001,697.2,146.09,101.847,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2002,699.7,154.91,108.386,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2003,698.9,166.58,116.427,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2004,700.5,173.41,121.472,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2005,700.2,191.05,133.765,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2006,697.7,196.31,136.974,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2007,695.5,204.43,142.179,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2008,694.8,204.2,141.879,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2009,690.3,217.31,150.011,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2010,691.4,248.77,172.002,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2011,691.3,259.15,179.141,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2012,692.8,281.63,195.106,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2013,693.1,294.72,204.259,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2014,692.6,328.2,227.303,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2015,693.1,350.64,243.028,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2016,697.3,357.66,249.38,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2017,700.0,394.99,276.481,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2018,702.9,374.77,263.416,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2019,701.7,378.55,265.632,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2020,701.9,380.9,267.35,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2021,702.4,392.95,276.015,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2022,700.1,409.84,286.912,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2023,697.3,429.25,299.316,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+SAU,Saudi Arabia,GCC,2024,691.9,454.64,314.587,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,true
+GBR,United Kingdom,UK,2000,522.0,377.06,196.821,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2001,529.0,384.77,203.545,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2002,520.9,387.24,201.71,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2003,536.8,398.21,213.745,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2004,536.0,393.92,211.151,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2005,535.2,398.35,213.212,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2006,559.3,397.27,222.209,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2007,556.1,396.81,220.658,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2008,554.4,388.96,215.633,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2009,504.7,376.76,190.132,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2010,517.2,382.06,197.599,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2011,499.6,367.97,183.85,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2012,537.2,363.87,195.481,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2013,506.9,358.28,181.619,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2014,462.9,338.08,156.496,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2015,397.8,338.87,134.795,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2016,333.4,339.18,113.097,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2017,302.2,338.22,102.203,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2018,285.7,333.76,95.354,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2019,268.4,327.19,87.826,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2020,242.6,310.3,75.273,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2021,267.1,307.9,82.229,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2022,255.0,324.58,82.781,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2023,235.6,292.53,68.925,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2024,216.5,284.16,61.513,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,false
+GBR,United Kingdom,UK,2025,218.2,293.38,64.022,"lifecycle, CO2-equivalent",Ember Yearly Electricity Data,https://ember-energy.org/data/yearly-electricity-data/,CC BY 4.0,true

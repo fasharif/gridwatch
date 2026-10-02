@@ -1,0 +1,176 @@
+version: 2
+
+models:
+  - name: stg_carbon_intensity__national_intensity
+    description: >
+      National half-hourly carbon intensity in gCO2/kWh (operational emissions, GB only).
+      Values are as published; implausible upstream values are flagged and removed in
+      int_national_half_hours, and counted by the warn-level range tests here.
+    columns:
+      - name: period_start_utc
+        description: Start of the settlement half-hour, naive UTC.
+        data_tests:
+          - not_null
+          - unique
+          - aligned_to_half_hour
+          - no_half_hour_gaps:
+              arguments:
+                dataset: national_intensity
+          - recency_within_hours:
+              arguments:
+                max_hours: "{{ var('recency_max_hours') }}"
+      - name: forecast_gco2_kwh
+        description: The API's latest forecast for the half-hour.
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: "{{ var('plausible_min_gco2_kwh') }}"
+                max_value: "{{ var('plausible_max_gco2_kwh') }}"
+              config:
+                warn_if: ">0"
+                error_if: ">100"
+      - name: actual_gco2_kwh
+        description: The API's estimate of actual intensity; null for the latest periods.
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: "{{ var('plausible_min_gco2_kwh') }}"
+                max_value: "{{ var('plausible_max_gco2_kwh') }}"
+              config:
+                warn_if: ">0"
+                error_if: ">100"
+      - name: intensity_index
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["very low", "low", "moderate", "high", "very high"]
+
+  - name: stg_carbon_intensity__generation_mix
+    description: National generation mix, percentage share per fuel and half-hour.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [period_start_utc, fuel]
+      - shares_sum_to_100:
+          arguments:
+            column_name: share_pct
+            group_by: [period_start_utc]
+            tolerance: 1.5
+    columns:
+      - name: period_start_utc
+        data_tests:
+          - not_null
+          - aligned_to_half_hour
+          - no_half_hour_gaps:
+              arguments:
+                dataset: generation_mix
+      - name: fuel
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fuels')
+                field: fuel
+      - name: share_pct
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+
+  - name: stg_carbon_intensity__regional_intensity
+    description: Forecast intensity per region and half-hour (the API has no regional actuals).
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [period_start_utc, region_id]
+    columns:
+      - name: period_start_utc
+        data_tests:
+          - not_null
+          - aligned_to_half_hour
+          - no_half_hour_gaps:
+              arguments:
+                dataset: regional_intensity
+                partition_by: region_id
+      - name: region_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('gb_regions')
+                field: region_id
+      - name: forecast_gco2_kwh
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1000
+      - name: intensity_index
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["very low", "low", "moderate", "high", "very high"]
+
+  - name: stg_carbon_intensity__regional_generation_mix
+    description: Regional generation mix per region, fuel and half-hour.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [period_start_utc, region_id, fuel]
+    columns:
+      - name: period_start_utc
+        data_tests:
+          - not_null
+      - name: region_id
+        data_tests:
+          - not_null
+      - name: fuel
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fuels')
+                field: fuel
+      - name: share_pct
+        data_tests:
+          - not_null
+          - accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+
+  - name: stg_carbon_intensity__forecast_snapshots
+    description: The API's 48-hour forecast as stored by each pipeline run.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [issued_at_utc, period_start_utc]
+    columns:
+      - name: issued_at_utc
+        data_tests:
+          - not_null
+          - aligned_to_half_hour
+      - name: period_start_utc
+        data_tests:
+          - not_null
+          - aligned_to_half_hour
+      - name: forecast_gco2_kwh
+        description: >
+          The API's forecast as it stood at the issue time. Implausible values are nulled
+          and flagged in fct_api_forecast_snapshots; this warn-level test counts them.
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: "{{ var('plausible_min_gco2_kwh') }}"
+                max_value: "{{ var('plausible_max_gco2_kwh') }}"
+              config:
+                warn_if: ">0"
+                error_if: ">100"
+      - name: lead_minutes
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: -30
+                max_value: 2880
